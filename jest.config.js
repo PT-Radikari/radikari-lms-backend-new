@@ -2,7 +2,7 @@ module.exports = {
 	preset: "ts-jest",
 	transform: { "^.+\\.ts?$": "ts-jest" },
 	testEnvironment: "node",
-	testRegex: "/src/.*\\.(test|spec)?\\.(ts|tsx)$",
+	testRegex: "/tests/.*\\.(test|spec)?\\.(ts|tsx)$",
 	moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
 	moduleNameMapper: {
 		"^\\$routes/(.*)$": "<rootDir>/src/routes/$1",
@@ -18,6 +18,8 @@ module.exports = {
 		"^\\$app/(.*)$": "<rootDir>/src/app/$1",
 		"^\\$server/(.*)$": "<rootDir>/src/server/$1",
 		"^\\$repositories/(.*)$": "<rootDir>/src/repositories/$1",
+		"^\\$generated/prisma/client$": "<rootDir>/generated/prisma/client",
+		"^\\$generated/(.*)$": "<rootDir>/generated/$1",
 	},
-	// setupFilesAfterEnv: ["<rootDir>/src/jest.setup.js"],
+	roots: ["<rootDir>/tests"],
 }

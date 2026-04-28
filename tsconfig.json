@@ -24,9 +24,10 @@
 			"$pkg/*": ["pkg/*"],
 			"$app/*": ["app/*"],
 			"$server/*": ["server/*"],
-			"$repositories/*": ["repositories/*"]
+			"$repositories/*": ["repositories/*"],
+			"$generated/*": ["../generated/*"]
 		}
 	},
-	"include": ["src/**/*", "scripts/**/*"],
+	"include": ["src/**/*", "scripts/**/*", "tests/**/*"],
 	"exclude": ["node_modules/*", "dist/*", "prisma/*"]
 }
