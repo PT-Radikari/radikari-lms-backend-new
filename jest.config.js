@@ -20,6 +20,8 @@ module.exports = {
 		"^\\$repositories/(.*)$": "<rootDir>/src/repositories/$1",
 		"^\\$generated/prisma/client$": "<rootDir>/generated/prisma/client",
 		"^\\$generated/(.*)$": "<rootDir>/generated/$1",
+		"^\\$tests/(.*)$": "<rootDir>/tests/$1",
+		"^\\$factories/(.*)$": "<rootDir>/tests/factories/$1",
 	},
 	roots: ["<rootDir>/tests"],
 }

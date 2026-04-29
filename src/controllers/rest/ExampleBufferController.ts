@@ -9,7 +9,7 @@ import { Context, TypedResponse } from "hono"
 
 export async function getPDF(c: Context): Promise<Response | TypedResponse> {
 	const serviceResponse = await ExampleBufferService.getPDF()
-	if (!serviceResponse)
+	if (!serviceResponse.status)
 		return handleServiceErrorWithResponse(c, serviceResponse)
 
 	const { buffer, fileName } = serviceResponse.data as BufferData
@@ -18,7 +18,7 @@ export async function getPDF(c: Context): Promise<Response | TypedResponse> {
 
 export async function getXLSX(c: Context): Promise<Response | TypedResponse> {
 	const serviceResponse = await ExampleBufferService.getXLSX()
-	if (!serviceResponse)
+	if (!serviceResponse.status)
 		return handleServiceErrorWithResponse(c, serviceResponse)
 
 	const { buffer, fileName } = serviceResponse.data as BufferData

@@ -14,6 +14,22 @@ jest.mock("$services/Tenant/TenantLimitService", () => ({
 
 jest.mock("$repositories/KnowledgeRepository", () => ({
 	getById: (...args: any[]) => mockGetById(...args),
+	getByIds: jest.fn<any>(),
+	updateStatus: jest.fn<any>(),
+	create: jest.fn<any>(),
+	getAll: jest.fn<any>(),
+	getAllArchived: jest.fn<any>(),
+	getSummary: jest.fn<any>(),
+	update: jest.fn<any>(),
+	deleteById: jest.fn<any>(),
+	getAllVersionsById: jest.fn<any>(),
+	createMany: jest.fn<any>(),
+	createManyAttachments: jest.fn<any>(),
+	createManyContent: jest.fn<any>(),
+	createShare: jest.fn<any>(),
+	findUsersByEmails: jest.fn<any>(),
+	archiveOrUnarchiveKnowledge: jest.fn<any>(),
+	incrementTotalViews: jest.fn<any>(),
 }))
 
 jest.mock("$pkg/logger", () => {

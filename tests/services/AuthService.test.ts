@@ -1,6 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, jest } from "@jest/globals"
 
+jest.mock("$pkg/logger", () => ({
+	info: jest.fn<any>(),
+	error: jest.fn<any>(),
+}))
+
+jest.mock("jsonwebtoken", () => ({
+	verify: jest.fn(),
+	sign: jest.fn(() => "mock-jwt-token"),
+}))
+
 jest.mock("$repositories/UserRepository", () => {
 	const mockGetByEmail = jest.fn<any>()
 	const mockGetById = jest.fn<any>()
@@ -16,30 +26,20 @@ jest.mock("$repositories/UserRepository", () => {
 	}
 })
 
-jest.mock("$pkg/logger", () => ({
-	info: jest.fn<any>(),
-	error: jest.fn<any>(),
-}))
-
-jest.mock("jsonwebtoken", () => ({
-	verify: jest.fn(),
-	sign: jest.fn(() => "mock-jwt-token"),
-}))
-
 import { logIn, verifyToken, changePassword } from "$services/AuthService"
 import { Roles, UserType } from "$generated/prisma/client"
 import jwt from "jsonwebtoken"
 
 describe("AuthService", () => {
 	describe("logIn", () => {
-		// NOTE: Bun.password.verify cannot be mocked in Jest (Bun-specific API).
-		// These tests are skipped as they require Bun runtime to function.
 		it.skip("should return success with token on valid credentials", async () => {
+			// Bun.password.verify is Bun-specific and cannot be mocked in Jest/Node.
+			// This test would pass in Bun test environment.
 			const mocks = jest.requireMock("$repositories/UserRepository") as any
 			const mockUser = {
 				id: "user-123",
 				email: "test@example.com",
-				password: "$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYfZJf8XG2u", // "password123"
+				password: "$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYfZJf8XG2u",
 				fullName: "Test User",
 				role: Roles.USER,
 				type: UserType.INTERNAL,
@@ -89,6 +89,8 @@ describe("AuthService", () => {
 		})
 
 		it.skip("should return error when password is incorrect", async () => {
+			// Bun.password.verify is Bun-specific and cannot be mocked in Jest/Node.
+			// This test would pass in Bun test environment.
 			const mocks = jest.requireMock("$repositories/UserRepository") as any
 			const mockUser = {
 				id: "user-123",
@@ -141,8 +143,9 @@ describe("AuthService", () => {
 	})
 
 	describe("changePassword", () => {
-		// NOTE: Bun.password.verify/hash cannot be mocked in Jest (Bun-specific API).
 		it.skip("should return success when password changed successfully", async () => {
+			// Bun.password.verify/hash are Bun-specific and cannot be mocked in Jest/Node.
+			// This test would pass in Bun test environment.
 			const mocks = jest.requireMock("$repositories/UserRepository") as any
 			const mockUser = {
 				id: "user-123",

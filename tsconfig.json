@@ -25,7 +25,9 @@
 			"$app/*": ["app/*"],
 			"$server/*": ["server/*"],
 			"$repositories/*": ["repositories/*"],
-			"$generated/*": ["../generated/*"]
+			"$generated/*": ["../generated/*"],
+			"$tests/*": ["../tests/*"],
+			"$factories/*": ["../tests/factories/*"]
 		}
 	},
 	"include": ["src/**/*", "scripts/**/*", "tests/**/*"],

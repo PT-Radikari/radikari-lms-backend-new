@@ -172,6 +172,195 @@ describe("AiEssayScoringService", () => {
 
 			expect(result.score).toBe(90)
 		})
+
+		// Score boundary tests
+		it("should return isCorrect=false when score is 69%", async () => {
+			const mockResult = {
+				isCorrect: false,
+				score: 69,
+				feedback: "Needs more detail",
+				confidence: 0.6,
+				strengths: [],
+				weaknesses: [],
+				suggestions: [],
+				keyPointsCovered: [],
+				keyPointsMissing: [],
+			}
+
+			mockGenerateObject.mockResolvedValue({
+				object: mockResult,
+				usage: null,
+			})
+
+			const result = await scoreEssayAnswer(validRequest)
+
+			expect(result.isCorrect).toBe(false)
+			expect(result.score).toBe(69)
+		})
+
+		it("should return isCorrect=true when score is exactly 70%", async () => {
+			const mockResult = {
+				isCorrect: true,
+				score: 70,
+				feedback: "Satisfactory",
+				confidence: 0.7,
+				strengths: [],
+				weaknesses: [],
+				suggestions: [],
+				keyPointsCovered: [],
+				keyPointsMissing: [],
+			}
+
+			mockGenerateObject.mockResolvedValue({
+				object: mockResult,
+				usage: null,
+			})
+
+			const result = await scoreEssayAnswer(validRequest)
+
+			expect(result.isCorrect).toBe(true)
+			expect(result.score).toBe(70)
+		})
+
+		it("should return isCorrect=true when score is 85%", async () => {
+			const mockResult = {
+				isCorrect: true,
+				score: 85,
+				feedback: "Excellent",
+				confidence: 0.9,
+				strengths: [],
+				weaknesses: [],
+				suggestions: [],
+				keyPointsCovered: [],
+				keyPointsMissing: [],
+			}
+
+			mockGenerateObject.mockResolvedValue({
+				object: mockResult,
+				usage: null,
+			})
+
+			const result = await scoreEssayAnswer(validRequest)
+
+			expect(result.isCorrect).toBe(true)
+			expect(result.score).toBe(85)
+		})
+
+		it("should handle empty expectedAnswer", async () => {
+			const mockResult = {
+				isCorrect: true,
+				score: 80,
+				feedback: "Good understanding",
+				confidence: 0.8,
+				strengths: [],
+				weaknesses: [],
+				suggestions: [],
+				keyPointsCovered: [],
+				keyPointsMissing: [],
+			}
+
+			mockGenerateObject.mockResolvedValue({
+				object: mockResult,
+				usage: null,
+			})
+
+			const requestNoExpectedAnswer = {
+				question: "Explain gravity",
+				userAnswer: "Gravity is a force that attracts objects",
+				tenantId: "tenant-123",
+			}
+
+			const result = await scoreEssayAnswer(requestNoExpectedAnswer as any)
+
+			expect(result.score).toBe(80)
+		})
+
+		it("should handle empty userAnswer", async () => {
+			const mockResult = {
+				isCorrect: false,
+				score: 0,
+				feedback: "No answer provided",
+				confidence: 0,
+				strengths: [],
+				weaknesses: [],
+				suggestions: [],
+				keyPointsCovered: [],
+				keyPointsMissing: [],
+			}
+
+			mockGenerateObject.mockResolvedValue({
+				object: mockResult,
+				usage: null,
+			})
+
+			const requestWithEmptyAnswer = {
+				question: "What is physics?",
+				userAnswer: "",
+				tenantId: "tenant-123",
+			}
+
+			const result = await scoreEssayAnswer(requestWithEmptyAnswer as any)
+
+			expect(result.score).toBe(0)
+		})
+
+		it("should handle null context", async () => {
+			const mockResult = {
+				isCorrect: true,
+				score: 75,
+				feedback: "Good",
+				confidence: 0.75,
+				strengths: [],
+				weaknesses: [],
+				suggestions: [],
+				keyPointsCovered: [],
+				keyPointsMissing: [],
+			}
+
+			mockGenerateObject.mockResolvedValue({
+				object: mockResult,
+				usage: null,
+			})
+
+			const requestWithNullContext = {
+				question: "What is chemistry?",
+				userAnswer: "Chemistry is the study of matter",
+				context: null,
+				tenantId: "tenant-123",
+			}
+
+			const result = await scoreEssayAnswer(requestWithNullContext as any)
+
+			expect(result.score).toBe(75)
+		})
+
+		it("should not log usage when tenantId is missing", async () => {
+			const mockResult = {
+				isCorrect: true,
+				score: 80,
+				feedback: "Good",
+				confidence: 0.8,
+				strengths: [],
+				weaknesses: [],
+				suggestions: [],
+				keyPointsCovered: [],
+				keyPointsMissing: [],
+			}
+
+			mockGenerateObject.mockResolvedValue({
+				object: mockResult,
+				usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
+			})
+
+			const requestWithoutTenantId = {
+				question: "What is biology?",
+				userAnswer: "Biology is the study of life",
+			}
+
+			await scoreEssayAnswer(requestWithoutTenantId as any)
+
+			expect(mockAiUsageLogCreate).not.toHaveBeenCalled()
+		})
 	})
 
 	describe("evaluateEssayAnswers", () => {

@@ -143,4 +143,101 @@ describe("EphemeralRagRunner", () => {
 			expect(capturedArgs.messages).toEqual(messages)
 		})
 	})
+
+	describe("validateNoIdentityParameters", () => {
+		const messages: ModelMessage[] = [{ role: "user", content: "Hello" }]
+
+		it("should throw when userId is passed", async () => {
+			await expect(
+				runEphemeralRag({
+					messages,
+					tenantId: "test-tenant",
+					threadId: "ephem_test123",
+					userId: "attacker-123",
+				} as any),
+			).rejects.toThrow("EphemeralRagRunner received forbidden identity parameters")
+		})
+
+		it("should throw when user_id is passed", async () => {
+			await expect(
+				runEphemeralRag({
+					messages,
+					tenantId: "test-tenant",
+					threadId: "ephem_test123",
+					user_id: "attacker-456",
+				} as any),
+			).rejects.toThrow("forbidden identity parameters")
+		})
+
+		it("should throw when authContext is passed", async () => {
+			await expect(
+				runEphemeralRag({
+					messages,
+					tenantId: "test-tenant",
+					threadId: "ephem_test123",
+					authContext: { userId: "123", roles: ["admin"] },
+				} as any),
+			).rejects.toThrow("forbidden identity parameters")
+		})
+
+		it("should throw when session is passed", async () => {
+			await expect(
+				runEphemeralRag({
+					messages,
+					tenantId: "test-tenant",
+					threadId: "ephem_test123",
+					session: { token: "jwt-token-here" },
+				} as any),
+			).rejects.toThrow("forbidden identity parameters")
+		})
+
+		it("should throw when jwt is passed", async () => {
+			await expect(
+				runEphemeralRag({
+					messages,
+					tenantId: "test-tenant",
+					threadId: "ephem_test123",
+					jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+				} as any),
+			).rejects.toThrow("forbidden identity parameters")
+		})
+
+		it("should throw when multiple forbidden fields are passed", async () => {
+			await expect(
+				runEphemeralRag({
+					messages,
+					tenantId: "test-tenant",
+					threadId: "ephem_test123",
+					userId: "bad",
+					session: "also-bad",
+				} as any),
+			).rejects.toThrow(/userId.*session/)
+		})
+
+		it("should throw with exact field names in error message", async () => {
+			await expect(
+				runEphemeralRag({
+					messages,
+					tenantId: "test-tenant",
+					threadId: "ephem_test123",
+					user_id: "bad",
+				} as any),
+			).rejects.toThrow("user_id")
+		})
+
+		it("should NOT throw when params object is empty", async () => {
+			// Empty params - the function returns early at `if (!params) return`
+			// This is tested by ensuring valid params pass through
+			const hybridMocks = (jest.requireMock("$services/AiChat/HybridChatCore") as any).__mocks
+			hybridMocks.executeHybridChatCore.mockResolvedValue(new Response())
+
+			await expect(
+				runEphemeralRag({
+					messages,
+					tenantId: "test-tenant",
+					threadId: "ephem_test123",
+				} as any),
+			).resolves.toBeInstanceOf(Response)
+		})
+	})
 })

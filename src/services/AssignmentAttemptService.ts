@@ -638,6 +638,25 @@ export async function getHistoryUserAssignmentAttempts(
 						correctAnswer:
 							question.assignmentQuestionEssayReferenceAnswer?.content,
 					}
+				} else if (question.type === AssignmentQuestionType.MULTIPLE_SELECT) {
+					return {
+						id: question.id,
+						order: question.order,
+						content: question.content,
+						type: question.type,
+						options: question.assignmentQuestionOptions.map((option) => ({
+							id: option.id,
+							content: option.content,
+							isCorrectAnswer: option.isCorrectAnswer,
+						})),
+						isCorrect: assignmentUserAttemptAnswer?.isAnswerCorrect,
+						userAnswer: (assignmentUserAttemptAnswer as any)?.selectedOptions?.map(
+							(o: any) => o.assignmentQuestionOptionId,
+						),
+						correctOptions: question.assignmentQuestionOptions
+							.filter((o) => o.isCorrectAnswer)
+							.map((o) => o.id),
+					}
 				} else if (question.type === AssignmentQuestionType.TRUE_FALSE) {
 					return {
 						id: question.id,
