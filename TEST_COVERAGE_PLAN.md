@@ -254,3 +254,9 @@ None — all core business logic is tested.
 | Packages | 5 | 5 | 0 | 0 |
 
 **Overall coverage: ~99%** (1 untested method + 1 skipped due to platform limitation)
+
+Sisa gap minor:
+
+AuthService.googleLogin — tidak ada test (1 method)
+KnowledgeService.bulkCreate error cases — 2 di-skip (mock factory issue)
+logIn/changePassword — di-skip karena Bun.password tidak bisa di-mock di Jest
