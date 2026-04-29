@@ -16,6 +16,9 @@ jest.mock("$repositories/ForumRepository", () => {
 	const mockLikeOrUnlikeForumComment = jest.fn<any>()
 	const mockGetUserForumLike = jest.fn<any>()
 	const mockGetCountForumComments = jest.fn<any>()
+	const mockGetAll = jest.fn<any>()
+	const mockGetForumComments = jest.fn<any>()
+	const mockGetForumCommentReplies = jest.fn<any>()
 	return {
 		create: mockCreate,
 		getById: mockGetById,
@@ -31,6 +34,9 @@ jest.mock("$repositories/ForumRepository", () => {
 		likeOrUnlikeForumComment: mockLikeOrUnlikeForumComment,
 		getUserForumLike: mockGetUserForumLike,
 		getCountForumComments: mockGetCountForumComments,
+		getAll: mockGetAll,
+		getForumComments: mockGetForumComments,
+		getForumCommentReplies: mockGetForumCommentReplies,
 	}
 })
 
@@ -51,6 +57,9 @@ import {
 	deleteForumComment,
 	pinOrUnpinForum,
 	likeOrUnlikeForumComment,
+	getAll,
+	getForumComments,
+	getForumCommentReplies,
 } from "$services/ForumService"
 
 describe("ForumService", () => {
@@ -302,6 +311,84 @@ describe("ForumService", () => {
 			mocks.getForumCommentById.mockResolvedValue(null)
 
 			const result = await likeOrUnlikeForumComment("nonexistent", "user-123")
+
+			expect(result.status).toBe(false)
+		})
+	})
+
+	describe("getAll", () => {
+		it("should return paginated forums", async () => {
+			const mocks = jest.requireMock("$repositories/ForumRepository") as any
+			mocks.getAll.mockResolvedValue({ content: [], totalData: 0 })
+
+			const result = await getAll({}, "tenant-123", "user-123")
+
+			expect(result.status).toBe(true)
+		})
+
+		it("should return error on repo failure", async () => {
+			const mocks = jest.requireMock("$repositories/ForumRepository") as any
+			mocks.getAll.mockRejectedValue(new Error("DB error"))
+
+			const result = await getAll({}, "tenant-123", "user-123")
+
+			expect(result.status).toBe(false)
+		})
+	})
+
+	describe("getForumComments", () => {
+		it("should return comments for forum", async () => {
+			const mocks = jest.requireMock("$repositories/ForumRepository") as any
+			mocks.getForumComments.mockResolvedValue([{ id: "c-1" }])
+
+			const result = await getForumComments("forum-123", {}, "user-123")
+
+			expect(result.status).toBe(true)
+		})
+
+		it("should return empty array when no comments", async () => {
+			const mocks = jest.requireMock("$repositories/ForumRepository") as any
+			mocks.getForumComments.mockResolvedValue([])
+
+			const result = await getForumComments("forum-123", {}, "user-123")
+
+			expect(result.status).toBe(true)
+		})
+
+		it("should return error on repo failure", async () => {
+			const mocks = jest.requireMock("$repositories/ForumRepository") as any
+			mocks.getForumComments.mockRejectedValue(new Error("DB error"))
+
+			const result = await getForumComments("forum-123", {}, "user-123")
+
+			expect(result.status).toBe(false)
+		})
+	})
+
+	describe("getForumCommentReplies", () => {
+		it("should return replies for comment", async () => {
+			const mocks = jest.requireMock("$repositories/ForumRepository") as any
+			mocks.getForumCommentReplies.mockResolvedValue([{ id: "r-1" }])
+
+			const result = await getForumCommentReplies("comment-123", {})
+
+			expect(result.status).toBe(true)
+		})
+
+		it("should return empty array when no replies", async () => {
+			const mocks = jest.requireMock("$repositories/ForumRepository") as any
+			mocks.getForumCommentReplies.mockResolvedValue([])
+
+			const result = await getForumCommentReplies("comment-123", {})
+
+			expect(result.status).toBe(true)
+		})
+
+		it("should return error on repo failure", async () => {
+			const mocks = jest.requireMock("$repositories/ForumRepository") as any
+			mocks.getForumCommentReplies.mockRejectedValue(new Error("DB error"))
+
+			const result = await getForumCommentReplies("comment-123", {})
 
 			expect(result.status).toBe(false)
 		})

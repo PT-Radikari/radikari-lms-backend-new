@@ -1708,4 +1708,173 @@ describe("AssignmentAttemptService — deep edge cases", () => {
 			expect(result.status).toBe(false)
 		})
 	})
+
+	describe("submitAssignment — pubsub failure graceful handling", () => {
+		it("returns success even when markAsSubmitted fails (inner catch swallows error)", async () => {
+			const repoMocks = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
+			repoMocks.getByUserIdAndAssignmentId.mockResolvedValue({
+				id: "attempt-123",
+				isSubmitted: false,
+			})
+			repoMocks.markAsSubmitted.mockRejectedValue(new Error("DB error on commit"))
+
+			const result = await submitAssignment("user-123", "assign-123")
+
+			// Inner try/catch catches the error and falls through to return success
+			expect(result.status).toBe(true)
+		})
+
+		it("returns success when markAsSubmitted succeeds but pubsub fails", async () => {
+			const repoMocks = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
+			const pubsubMock = (jest.requireMock("$pkg/pubsub") as any).default
+			repoMocks.getByUserIdAndAssignmentId.mockResolvedValue({
+				id: "attempt-123",
+				isSubmitted: false,
+			})
+			repoMocks.markAsSubmitted.mockResolvedValue(undefined)
+			pubsubMock.sendToQueue.mockRejectedValue(new Error("RabbitMQ down"))
+
+			const result = await submitAssignment("user-123", "assign-123")
+
+			// Should return success despite pubsub failure (fire-and-forget)
+			expect(result.status).toBe(true)
+		})
+	})
+
+	describe("calculateAssignmentScore — graceful handling when not found", () => {
+		it("resolves (not throws) when assignmentAttempt is null — error is logged and swallowed", async () => {
+			const repoMocks = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
+			repoMocks.getById.mockResolvedValue(null)
+
+			// The service catches the error internally and resolves with undefined
+			const result = await calculateAssignmentScore("nonexistent")
+			expect(result).toBeUndefined()
+		})
+
+		it("resolves (not throws) when assignment is null — error is logged and swallowed", async () => {
+			const repoMocks = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
+			const assignMocks = jest.requireMock("$repositories/Assignment") as any
+			repoMocks.getById.mockResolvedValue({
+				id: "attempt-123",
+				assignmentId: "assign-123",
+				userId: "user-123",
+			})
+			assignMocks.getByIdDefault.mockResolvedValue(null)
+
+			const result = await calculateAssignmentScore("attempt-123")
+			expect(result).toBeUndefined()
+		})
+	})
+
+	describe("getAllQuestionsAndAnswers — MULTIPLE_SELECT mapping", () => {
+		it("maps MULTIPLE_SELECT userAnswer as array of optionIds", async () => {
+			const repoMocks = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
+			const assignMocks = jest.requireMock("$repositories/Assignment") as any
+			const questMocks = jest.requireMock("$repositories/Assignment/AssignmentQuestionRepository") as any
+			repoMocks.getByUserIdAndAssignmentId.mockResolvedValue({
+				id: "attempt-123",
+				isSubmitted: false,
+				assignmentId: "assign-123",
+				randomSeed: 0,
+			})
+			assignMocks.getByIdDefault.mockResolvedValue({
+				id: "assign-123",
+				isRandomized: false,
+			})
+			questMocks.getAllQuestions.mockResolvedValue([
+				{
+					id: "q1",
+					order: 1,
+					content: "Select all correct answers",
+					type: "MULTIPLE_SELECT",
+					assignmentQuestionOptions: [
+						{ id: "opt-a", content: "A" },
+						{ id: "opt-b", content: "B" },
+						{ id: "opt-c", content: "C" },
+					],
+				},
+			])
+			repoMocks.getAllUserAttemptAnswers.mockResolvedValue([
+				{
+					id: "a1",
+					assignmentQuestionId: "q1",
+					selectedOptions: [
+						{ assignmentQuestionOptionId: "opt-a" },
+						{ assignmentQuestionOptionId: "opt-b" },
+					],
+				},
+			])
+
+			const result = await getAllQuestionsAndAnswers("user-123", "assign-123")
+
+			expect(result.status).toBe(true)
+			const data = result.data as any[]
+			expect(data[0].type).toBe("MULTIPLE_SELECT")
+			expect(data[0].userAnswer).toEqual(["opt-a", "opt-b"])
+			expect(data[0].options).toEqual([
+				{ id: "opt-a", content: "A" },
+				{ id: "opt-b", content: "B" },
+				{ id: "opt-c", content: "C" },
+			])
+		})
+	})
+
+	describe("getTimeStatus — graceful handling edge cases", () => {
+		it("returns NOT_FOUND when assignment attempt not found", async () => {
+			const repoMocks = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
+			repoMocks.getByUserIdAndAssignmentId.mockResolvedValue(null)
+
+			const result = await getTimeStatus("user-123", "assign-123")
+
+			expect(result.status).toBe(false)
+		})
+
+		it("returns BAD_REQUEST when assignment already submitted", async () => {
+			const repoMocks = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
+			repoMocks.getByUserIdAndAssignmentId.mockResolvedValue({
+				id: "attempt-123",
+				isSubmitted: true,
+				createdAt: new Date(),
+			})
+
+			const result = await getTimeStatus("user-123", "assign-123")
+
+			expect(result.status).toBe(false)
+		})
+
+		it("returns NOT_FOUND when assignment tenant not found", async () => {
+			const repoMocks = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
+			const assignMocks = jest.requireMock("$repositories/Assignment") as any
+			repoMocks.getByUserIdAndAssignmentId.mockResolvedValue({
+				id: "attempt-123",
+				isSubmitted: false,
+				createdAt: new Date(),
+			})
+			assignMocks.getById.mockResolvedValue(null)
+
+			const result = await getTimeStatus("user-123", "assign-123")
+
+			expect(result.status).toBe(false)
+		})
+	})
+
+	describe("create — already submitted for same assignment", () => {
+		it("returns error when assignment already submitted", async () => {
+			const repoMocks = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
+			const assignMocks = jest.requireMock("$repositories/Assignment") as any
+			assignMocks.getById.mockResolvedValue({
+				id: "assign-123",
+				status: "PUBLISHED",
+			})
+			repoMocks.getCurrentUserAssignmentAttemptByUserId.mockResolvedValue(null)
+			repoMocks.getByUserIdAndAssignmentId.mockResolvedValue({
+				id: "existing-attempt",
+				isSubmitted: true,
+			})
+
+			const result = await create("assign-123", "user-123", "tenant-123")
+
+			expect(result.status).toBe(false)
+		})
+	})
 })

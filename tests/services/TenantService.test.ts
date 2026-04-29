@@ -6,6 +6,7 @@ jest.mock("$repositories/TenantRepository", () => {
 	const mockGetAll = jest.fn<any>()
 	const mockGetById = jest.fn<any>()
 	const mockDeleteById = jest.fn<any>()
+	const mockUpdate = jest.fn<any>()
 	const mockAddTenantUser = jest.fn<any>()
 	const mockGetAllByUserId = jest.fn<any>()
 	const mockUpsertSetting = jest.fn<any>()
@@ -15,6 +16,7 @@ jest.mock("$repositories/TenantRepository", () => {
 		getAll: mockGetAll,
 		getById: mockGetById,
 		deleteById: mockDeleteById,
+		update: mockUpdate,
 		addTenantUser: mockAddTenantUser,
 		getAllByUserId: mockGetAllByUserId,
 		upsertSetting: mockUpsertSetting,
@@ -48,6 +50,8 @@ import {
 	getUserPoints,
 	upsertSetting,
 	getSettings,
+	update,
+	getAllByUserId,
 } from "$services/TenantService"
 
 describe("TenantService", () => {
@@ -212,6 +216,71 @@ describe("TenantService", () => {
 			const result = await getSettings("tenant-123")
 
 			expect(result.status).toBe(true)
+		})
+	})
+
+	describe("update", () => {
+		it("should update tenant successfully", async () => {
+			const mocks = jest.requireMock("$repositories/TenantRepository") as any
+			const logMock = jest.requireMock("$services/UserActivityLogService") as any
+			mocks.getById.mockResolvedValue({ id: "tenant-123", name: "Old Name" })
+			mocks.update.mockResolvedValue({ id: "tenant-123", name: "New Name" })
+
+			const result = await update("tenant-123", { name: "New Name" } as any, "user-123")
+
+			expect(result.status).toBe(true)
+			expect(logMock.create).toHaveBeenCalled()
+		})
+
+		it("should return NOT_FOUND when tenant does not exist", async () => {
+			const mocks = jest.requireMock("$repositories/TenantRepository") as any
+			mocks.getById.mockResolvedValue(null)
+
+			const result = await update("nonexistent", { name: "Test" } as any, "user-123")
+
+			expect(result.status).toBe(false)
+			expect(result.err?.code).toBe(404)
+		})
+
+		it("should return error on repo failure", async () => {
+			const mocks = jest.requireMock("$repositories/TenantRepository") as any
+			mocks.getById.mockRejectedValue(new Error("DB error"))
+
+			const result = await update("tenant-123", {} as any, "user-123")
+
+			expect(result.status).toBe(false)
+		})
+
+		it("should log activity with updated name", async () => {
+			const mocks = jest.requireMock("$repositories/TenantRepository") as any
+			const logMock = jest.requireMock("$services/UserActivityLogService") as any
+			mocks.getById.mockResolvedValue({ id: "tenant-123", name: "Original" })
+			mocks.update.mockResolvedValue({ id: "tenant-123", name: "Updated" })
+
+			await update("tenant-123", { name: "Updated" } as any, "user-123")
+
+			// additionalInformation contains the name: dengan nama "Updated"
+			expect(logMock.create.mock.calls[0][3]).toContain("Updated")
+		})
+	})
+
+	describe("getAllByUserId", () => {
+		it("should return paginated tenants for user", async () => {
+			const mocks = jest.requireMock("$repositories/TenantRepository") as any
+			mocks.getAllByUserId.mockResolvedValue({ content: [], totalData: 0 })
+
+			const result = await getAllByUserId({}, { id: "user-123" } as any)
+
+			expect(result.status).toBe(true)
+		})
+
+		it("should return error on repo failure", async () => {
+			const mocks = jest.requireMock("$repositories/TenantRepository") as any
+			mocks.getAllByUserId.mockRejectedValue(new Error("DB error"))
+
+			const result = await getAllByUserId({}, { id: "user-123" } as any)
+
+			expect(result.status).toBe(false)
 		})
 	})
 })

@@ -11,6 +11,11 @@ import {
 	shareKnowledge,
 	getShareHistory,
 	sendKnowledgeApprovalNotification,
+	create,
+	getAllArchived,
+	getSummary,
+	update,
+	deleteById,
 } from "$services/KnowledgeService"
 import { KnowledgeActivityLogAction, KnowledgeAccess } from "$generated/prisma/client"
 
@@ -842,5 +847,174 @@ describe("KnowledgeService — untested methods", () => {
 				(jest.requireMock("$pkg/prisma") as any).prisma.knowledgeShare.count.mockImplementation(orig)
 			}
 		})
+	})
+})
+
+// =========================================================
+// create, update, deleteById, getAllArchived, getSummary
+// =========================================================
+describe("KnowledgeService — create", () => {
+	it("sets version = parent.version + 1 when parentId provided and no existing versions", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getAllVersionsById.mockResolvedValue([])
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getById.mockResolvedValue({ id: "parent-1", version: 2 })
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).create.mockResolvedValue({ id: "child-1" })
+		const result = await create("user-1", "tenant-1", { parentId: "parent-1" } as any)
+		expect(result.status).toBe(true)
+		expect((jest.requireMock("$repositories/KnowledgeRepository") as any).create.mock.calls[0][0]).toMatchObject({ version: 3 })
+	})
+
+	it("sets version = highestVersion + 1 when parentId provided and versions exist", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getAllVersionsById.mockResolvedValue([
+			{ version: 1 }, { version: 2 }, { version: 3 },
+		])
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).create.mockResolvedValue({ id: "child-1" })
+		const result = await create("user-1", "tenant-1", { parentId: "parent-1" } as any)
+		expect(result.status).toBe(true)
+		expect((jest.requireMock("$repositories/KnowledgeRepository") as any).create.mock.calls[0][0]).toMatchObject({ version: 4 })
+	})
+
+	it("does not set version when parentId not provided", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).create.mockResolvedValue({ id: "k-1" })
+		const result = await create("user-1", "tenant-1", { headline: "Test" } as any)
+		expect(result.status).toBe(true)
+		expect((jest.requireMock("$repositories/KnowledgeRepository") as any).create.mock.calls[0][0]).not.toHaveProperty("version")
+	})
+
+	it("logs activity with headline", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).create.mockResolvedValue({ id: "k-1" })
+		await create("user-1", "tenant-1", { headline: "My Headline" } as any)
+		expect(mockActivityCreate).toHaveBeenCalledWith(
+			"user-1", "Menambahkan pengetahuan", "tenant-1",
+			'dengan headline "My Headline"',
+		)
+	})
+
+	it("returns 500 on repo error", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).create.mockRejectedValue(new Error("DB error"))
+		const result = await create("user-1", "tenant-1", {} as any)
+		expect(result.status).toBe(false)
+		expect(result.err?.code).toBe(500)
+	})
+})
+
+describe("KnowledgeService — getAllArchived", () => {
+	it("returns paginated archived knowledge", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getAllArchived.mockResolvedValue({ content: [], totalData: 0 })
+		const result = await getAllArchived({ id: "user-1" } as any, "tenant-1", {} as any)
+		expect(result.status).toBe(true)
+	})
+
+	it("returns 500 on repo error", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getAllArchived.mockRejectedValue(new Error("DB error"))
+		const result = await getAllArchived({ id: "user-1" } as any, "tenant-1", {} as any)
+		expect(result.status).toBe(false)
+	})
+})
+
+describe("KnowledgeService — getSummary", () => {
+	it("returns summary data from repository", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getSummary.mockResolvedValue({ total: 5, approved: 3 })
+		const result = await getSummary({ id: "user-1" } as any, "tenant-1", {} as any)
+		expect(result.status).toBe(true)
+	})
+
+	it("returns 500 on repo error", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getSummary.mockRejectedValue(new Error("DB error"))
+		const result = await getSummary({ id: "user-1" } as any, "tenant-1", {} as any)
+		expect(result.status).toBe(false)
+	})
+})
+
+describe("KnowledgeService — update", () => {
+	it("resets status PENDING when current is REJECTED", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getById.mockResolvedValue({ id: "k-1", status: "REJECTED" })
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).update.mockResolvedValue({ id: "k-1", status: "PENDING" })
+		await update("k-1", "tenant-1", {} as any, "user-1")
+		expect((jest.requireMock("$repositories/KnowledgeRepository") as any).update.mock.calls[0][0]).toMatchObject({ status: "PENDING" })
+	})
+
+	it("resets status PENDING when current is REVISION", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getById.mockResolvedValue({ id: "k-1", status: "REVISION" })
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).update.mockResolvedValue({ id: "k-1", status: "PENDING" })
+		await update("k-1", "tenant-1", {} as any, "user-1")
+		expect((jest.requireMock("$repositories/KnowledgeRepository") as any).update.mock.calls[0][0]).toMatchObject({ status: "PENDING" })
+	})
+
+	it("does not reset status when current is APPROVED", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getById.mockResolvedValue({ id: "k-1", status: "APPROVED" })
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).update.mockResolvedValue({ id: "k-1" })
+		await update("k-1", "tenant-1", {} as any, "user-1")
+		expect((jest.requireMock("$repositories/KnowledgeRepository") as any).update.mock.calls[0][0]).not.toHaveProperty("status")
+	})
+
+	it("logs activity with headline", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getById.mockResolvedValue({ id: "k-1" })
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).update.mockResolvedValue({ id: "k-1", headline: "Updated" })
+		await update("k-1", "tenant-1", { headline: "Updated" } as any, "user-1")
+		expect(mockActivityCreate).toHaveBeenCalledWith(
+			"user-1", "Mengedit pengetahuan", "tenant-1",
+			expect.stringContaining("Updated"),
+		)
+	})
+
+	it("returns NOT_FOUND when knowledge does not exist", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getById.mockResolvedValue(null)
+		const result = await update("k-nonexistent", "tenant-1", {} as any, "user-1")
+		expect(result.status).toBe(false)
+		expect(result.err?.code).toBe(404)
+	})
+
+	it("returns 500 on repo error", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getById.mockRejectedValue(new Error("DB error"))
+		const result = await update("k-1", "tenant-1", {} as any, "user-1")
+		expect(result.status).toBe(false)
+		expect(result.err?.code).toBe(500)
+	})
+})
+
+describe("KnowledgeService — deleteById", () => {
+	it("returns NOT_FOUND when knowledge does not exist", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getById.mockResolvedValue(null)
+		const result = await deleteById("k-nonexistent", "tenant-1", "user-1")
+		expect(result.status).toBe(false)
+		expect(result.err?.code).toBe(404)
+	})
+
+	it("deletes knowledge and returns success", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getById.mockResolvedValue({ id: "k-1", headline: "Test" })
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).deleteById.mockResolvedValue(undefined)
+		(jest.requireMock("$pkg/pubsub") as any).default.sendToQueue.mockResolvedValue(undefined)
+		const result = await deleteById("k-1", "tenant-1", "user-1")
+		expect(result.status).toBe(true)
+		expect((jest.requireMock("$repositories/KnowledgeRepository") as any).deleteById).toHaveBeenCalledWith("k-1")
+	})
+
+	it("publishes KNOWLEDGE_DELETE pubsub event (fire-and-forget)", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getById.mockResolvedValue({ id: "k-1", headline: "Test" })
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).deleteById.mockResolvedValue(undefined)
+		(jest.requireMock("$pkg/pubsub") as any).default.sendToQueue.mockResolvedValue(undefined)
+		await deleteById("k-1", "tenant-1", "user-1")
+		expect((jest.requireMock("$pkg/pubsub") as any).default.sendToQueue).toHaveBeenCalledWith(
+			"KNOWLEDGE_DELETE",
+			{ knowledgeId: "k-1" },
+		)
+	})
+
+	it("still succeeds when pubsub throws", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getById.mockResolvedValue({ id: "k-1", headline: "Test" })
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).deleteById.mockResolvedValue(undefined)
+		(jest.requireMock("$pkg/pubsub") as any).default.sendToQueue.mockRejectedValue(new Error("Queue down"))
+		const result = await deleteById("k-1", "tenant-1", "user-1")
+		expect(result.status).toBe(true)
+	})
+
+	it("logs activity before deletion", async () => {
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).getById.mockResolvedValue({ id: "k-1", headline: "Delete Me" })
+		(jest.requireMock("$repositories/KnowledgeRepository") as any).deleteById.mockResolvedValue(undefined)
+		await deleteById("k-1", "tenant-1", "user-1")
+		expect(mockActivityCreate).toHaveBeenCalledWith(
+			"user-1", "Menghapus pengetahuan", "tenant-1",
+			'dengan headline "Delete Me"',
+		)
 	})
 })

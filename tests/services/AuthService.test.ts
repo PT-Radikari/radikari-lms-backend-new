@@ -1,5 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, it, expect, jest } from "@jest/globals"
+import { describe, it, expect, jest, beforeEach } from "@jest/globals"
+
+// Shared mock references
+var sharedMockGetByEmail = jest.fn<any>()
+var sharedMockGetById = jest.fn<any>()
+var sharedMockUpdatePassword = jest.fn<any>()
+var sharedMockCreateGoogleUser = jest.fn<any>()
+var sharedMockUpdate = jest.fn<any>()
+var sharedMockOAuth2Client = {
+	getToken: jest.fn<any>(),
+	setCredentials: jest.fn<any>(),
+}
+var sharedMockUserinfoGet = jest.fn<any>()
 
 jest.mock("$pkg/logger", () => ({
 	info: jest.fn<any>(),
@@ -12,21 +24,33 @@ jest.mock("jsonwebtoken", () => ({
 }))
 
 jest.mock("$repositories/UserRepository", () => {
-	const mockGetByEmail = jest.fn<any>()
-	const mockGetById = jest.fn<any>()
-	const mockUpdatePassword = jest.fn<any>()
-	const mockCreateGoogleUser = jest.fn<any>()
-	const mockUpdate = jest.fn<any>()
 	return {
-		getByEmail: mockGetByEmail,
-		getById: mockGetById,
-		updatePassword: mockUpdatePassword,
-		createGoogleUser: mockCreateGoogleUser,
-		update: mockUpdate,
+		getByEmail: sharedMockGetByEmail,
+		getById: sharedMockGetById,
+		updatePassword: sharedMockUpdatePassword,
+		createGoogleUser: sharedMockCreateGoogleUser,
+		update: sharedMockUpdate,
 	}
 })
 
-import { logIn, verifyToken, changePassword } from "$services/AuthService"
+jest.mock("googleapis", () => {
+	return {
+		google: {
+			// Used by $pkg/oauth/google: new google.auth.OAuth2(...)
+			auth: {
+				OAuth2: jest.fn(() => sharedMockOAuth2Client),
+			},
+			// Used by AuthService.googleCallback: google.oauth2(...)
+			oauth2: (_opts: any) => ({
+				userinfo: {
+					get: sharedMockUserinfoGet,
+				},
+			}),
+		},
+	}
+})
+
+import { logIn, verifyToken, changePassword, googleCallback } from "$services/AuthService"
 import { Roles, UserType } from "$generated/prisma/client"
 import jwt from "jsonwebtoken"
 
@@ -179,6 +203,66 @@ describe("AuthService", () => {
 			)
 
 			expect(result.status).toBe(false)
+		})
+	})
+
+	describe("googleCallback", () => {
+		beforeEach(() => {
+			sharedMockGetByEmail.mockReset()
+			sharedMockGetById.mockReset()
+			sharedMockUpdatePassword.mockReset()
+			sharedMockCreateGoogleUser.mockReset()
+			sharedMockUpdate.mockReset()
+			sharedMockOAuth2Client.getToken.mockReset()
+			sharedMockOAuth2Client.setCredentials.mockReset()
+			sharedMockUserinfoGet.mockReset()
+		})
+
+		it("should create new user when email not found", async () => {
+			sharedMockOAuth2Client.getToken.mockResolvedValue({ tokens: { access_token: "token" } })
+			sharedMockOAuth2Client.setCredentials.mockResolvedValue(undefined)
+			sharedMockUserinfoGet.mockResolvedValue({ status: 200, data: { email: "test@example.com", name: "Test User", picture: "" } })
+			sharedMockGetByEmail.mockResolvedValue(null)
+			sharedMockCreateGoogleUser.mockResolvedValue({ id: "new-user", email: "test@example.com", fullName: "Test User", isActive: true })
+
+			const result = await googleCallback("test-code")
+
+			expect(result.status).toBe(true)
+			expect(sharedMockCreateGoogleUser).toHaveBeenCalled()
+		})
+
+		it("should update lastLoginAt for existing active user", async () => {
+			sharedMockOAuth2Client.getToken.mockResolvedValue({ tokens: { access_token: "token" } })
+			sharedMockOAuth2Client.setCredentials.mockResolvedValue(undefined)
+			sharedMockUserinfoGet.mockResolvedValue({ status: 200, data: { email: "test@example.com", name: "Test User", picture: "" } })
+			sharedMockGetByEmail.mockResolvedValue({ id: "existing-user", email: "test@example.com", isActive: true, fullName: "Test User" })
+			sharedMockUpdate.mockResolvedValue({ id: "existing-user" })
+
+			const result = await googleCallback("test-code")
+
+			expect(result.status).toBe(true)
+			expect(sharedMockUpdate).toHaveBeenCalled()
+		})
+
+		it("should return error when account is inactive", async () => {
+			sharedMockOAuth2Client.getToken.mockResolvedValue({ tokens: { access_token: "token" } })
+			sharedMockOAuth2Client.setCredentials.mockResolvedValue(undefined)
+			sharedMockUserinfoGet.mockResolvedValue({ status: 200, data: { email: "test@example.com", name: "Test User", picture: "" } })
+			sharedMockGetByEmail.mockResolvedValue({ id: "inactive-user", isActive: false })
+
+			const result = await googleCallback("test-code")
+
+			expect(result.status).toBe(false)
+			expect(result.err?.code).toBe(403)
+		})
+
+		it("should return error on OAuth failure", async () => {
+			sharedMockOAuth2Client.getToken.mockRejectedValue(new Error("OAuth error"))
+
+			const result = await googleCallback("invalid-code")
+
+			expect(result.status).toBe(false)
+			expect(result.err?.code).toBe(500)
 		})
 	})
 })

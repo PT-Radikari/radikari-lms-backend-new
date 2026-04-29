@@ -352,4 +352,149 @@ describe("AiChatController", () => {
 			expect(spy.status).toHaveBeenCalledWith(400)
 		})
 	})
+
+	// ─── streamMessage ─────────────────────────────────────────────────────
+
+	describe("streamMessage", () => {
+		it("should stream message successfully with messages array", async () => {
+			const mockResponse = new Response("stream-data", {
+				headers: { "Content-Type": "text/event-stream" },
+			})
+			mockStreamHybridChat.mockResolvedValue(mockResponse)
+
+			const { mock } = createMockContext({
+				params: { tenantId: "tenant-123", chatRoomId: "room-123" },
+				jwtPayload: mockUserJWT,
+				body: {
+					messages: [{ role: "user", content: "Hello AI" }],
+				},
+			})
+
+			const result = await AiChatController.streamMessage(mock)
+
+			expect(result).toBe(mockResponse)
+			expect(mockStreamHybridChat).toHaveBeenCalledWith({
+				messages: [{ role: "user", content: "Hello AI" }],
+				chatRoomId: "room-123",
+				tenantId: "tenant-123",
+				userId: mockUserJWT.id,
+			})
+		})
+
+		it("should convert single message format to array", async () => {
+			const mockResponse = new Response("stream-data")
+			mockStreamHybridChat.mockResolvedValue(mockResponse)
+
+			const { mock } = createMockContext({
+				params: { tenantId: "tenant-123", chatRoomId: "room-123" },
+				jwtPayload: mockUserJWT,
+				body: { message: "Single message" },
+			})
+
+			const result = await AiChatController.streamMessage(mock)
+
+			expect(result).toBe(mockResponse)
+			expect(mockStreamHybridChat).toHaveBeenCalledWith(
+				expect.objectContaining({
+					messages: expect.arrayContaining([
+						expect.objectContaining({ role: "user", content: "Single message" }),
+					]),
+				}),
+			)
+		})
+
+		it("should return 400 when request body is invalid", async () => {
+			const { mock, spy } = createMockContext({
+				params: { tenantId: "tenant-123", chatRoomId: "room-123" },
+				jwtPayload: mockUserJWT,
+				body: { messages: "not-an-array" },
+			})
+
+			const result = await AiChatController.streamMessage(mock)
+
+			expect(result).toBeDefined()
+			expect(spy.json).toHaveBeenCalledWith(
+				expect.objectContaining({ error: "Invalid request body" }),
+				400,
+			)
+		})
+
+		it("should return 400 when messages array is empty", async () => {
+			const { mock, spy } = createMockContext({
+				params: { tenantId: "tenant-123", chatRoomId: "room-123" },
+				jwtPayload: mockUserJWT,
+				body: { messages: [] },
+			})
+
+			const result = await AiChatController.streamMessage(mock)
+
+			expect(result).toBeDefined()
+			expect(spy.json).toHaveBeenCalledWith(
+				expect.objectContaining({ error: "Messages are required" }),
+				400,
+			)
+		})
+
+		it("should return 400 when messages are missing and no single message", async () => {
+			const { mock, spy } = createMockContext({
+				params: { tenantId: "tenant-123", chatRoomId: "room-123" },
+				jwtPayload: mockUserJWT,
+				body: {},
+			})
+
+			const result = await AiChatController.streamMessage(mock)
+
+			expect(result).toBeDefined()
+			expect(spy.json).toHaveBeenCalledWith(
+				expect.objectContaining({ error: "Messages are required" }),
+				400,
+			)
+		})
+
+		it("should return 400 when chatRoomId is missing", async () => {
+			const { mock, spy } = createMockContext({
+				params: { tenantId: "tenant-123" },
+				jwtPayload: mockUserJWT,
+				body: { messages: [{ role: "user", content: "Hello" }] },
+			})
+
+			const result = await AiChatController.streamMessage(mock)
+
+			expect(result).toBeDefined()
+			expect(spy.json).toHaveBeenCalledWith(
+				expect.objectContaining({ error: "Chat Room ID is required" }),
+				400,
+			)
+		})
+
+		it("should handle parts format in messages", async () => {
+			const mockResponse = new Response("stream-data")
+			mockStreamHybridChat.mockResolvedValue(mockResponse)
+
+			const { mock } = createMockContext({
+				params: { tenantId: "tenant-123", chatRoomId: "room-123" },
+				jwtPayload: mockUserJWT,
+				body: {
+					messages: [
+						{
+							role: "user",
+							parts: [
+								{ type: "text", text: "Part one" },
+								{ type: "text", text: "Part two" },
+							],
+						},
+					],
+				},
+			})
+
+			const result = await AiChatController.streamMessage(mock)
+
+			expect(result).toBe(mockResponse)
+			expect(mockStreamHybridChat).toHaveBeenCalledWith(
+				expect.objectContaining({
+					messages: [{ role: "user", content: "Part onePart two" }],
+				}),
+			)
+		})
+	})
 })

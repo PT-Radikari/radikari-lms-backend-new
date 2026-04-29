@@ -89,5 +89,41 @@ describe("AnnouncementService", () => {
 			const result = await deleteById("nonexistent", "tenant-123", "user-123")
 			expect(result.status).toBe(false)
 		})
+
+		it("should return error on repo failure", async () => {
+			const mocks = jest.requireMock("$repositories/AnnouncementRepository") as any
+			mocks.deleteById.mockRejectedValue(new Error("DB error"))
+			mocks.getById.mockResolvedValue({ id: "announce-123" })
+			const result = await deleteById("announce-123", "tenant-123", "user-123")
+			expect(result.status).toBe(false)
+		})
+	})
+
+	describe("create — error cases", () => {
+		it("should return error on repo failure", async () => {
+			const mocks = jest.requireMock("$repositories/AnnouncementRepository") as any
+			mocks.create.mockRejectedValue(new Error("DB error"))
+			const result = await create({ title: "Test" } as any, "user-123", "tenant-123")
+			expect(result.status).toBe(false)
+		})
+	})
+
+	describe("getAll — error cases", () => {
+		it("should return error on repo failure", async () => {
+			const mocks = jest.requireMock("$repositories/AnnouncementRepository") as any
+			mocks.getAll.mockRejectedValue(new Error("DB error"))
+			const result = await getAll({} as any, { id: "user-123" } as any, "tenant-123")
+			expect(result.status).toBe(false)
+		})
+	})
+
+	describe("update — error cases", () => {
+		it("should return error on repo failure", async () => {
+			const mocks = jest.requireMock("$repositories/AnnouncementRepository") as any
+			mocks.update.mockRejectedValue(new Error("DB error"))
+			mocks.getById.mockResolvedValue({ id: "announce-123" })
+			const result = await update("announce-123", { title: "Updated" } as any, "tenant-123", "user-123")
+			expect(result.status).toBe(false)
+		})
 	})
 })

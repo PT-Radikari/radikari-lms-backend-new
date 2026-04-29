@@ -317,5 +317,15 @@ describe("NotificationService", () => {
 
 			expect(result.status).toBe(false)
 		})
+
+		it("should return error when unauthorized (userId mismatch)", async () => {
+			const mocks = jest.requireMock("$repositories/NotificationRepository") as any
+			mocks.getById.mockResolvedValue({ id: "notif-123", userId: "other-user" })
+
+			const result = await deleteById("notif-123", "user-123")
+
+			expect(result.status).toBe(false)
+			expect(result.err?.code).toBe(401)
+		})
 	})
 })

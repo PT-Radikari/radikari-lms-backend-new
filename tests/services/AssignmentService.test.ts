@@ -801,4 +801,64 @@ describe("AssignmentService — deep edge cases", () => {
 			expect(notifyMocks.notifySpecificUsers).not.toHaveBeenCalled()
 		})
 	})
+
+	describe("getStatistics — with actual submissions", () => {
+		it("calculates averageScore correctly with multiple submissions", async () => {
+			const mocks = jest.requireMock("$repositories/Assignment") as any
+			const attemptRepo = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
+			const now = new Date()
+			mocks.getById.mockResolvedValue({
+				id: "assign-123",
+				title: "Test Assignment",
+				tenantId: "tenant-123",
+				status: "PUBLISHED",
+				showQuestion: true,
+				showAnswer: true,
+			})
+			attemptRepo.getSubmittedAttemptsByAssignmentId.mockResolvedValue([
+				{
+					id: "a1",
+					percentageScore: 80,
+					createdAt: new Date(now.getTime() - 30 * 60000),
+					submittedAt: new Date(now.getTime()),
+				},
+				{
+					id: "a2",
+					percentageScore: 60,
+					createdAt: new Date(now.getTime() - 45 * 60000),
+					submittedAt: new Date(now.getTime() - 5 * 60000),
+				},
+			])
+			mocks.getTotalAssignedUsers.mockResolvedValue(3)
+			mocks.getQuestionAnalytics.mockResolvedValue([])
+
+			const result = await getStatistics("assign-123", "tenant-123")
+
+			expect(result.status).toBe(true)
+			const stats = (result.data as any).stats
+			expect(stats.averageScore).toBe(70)
+			expect(stats.totalSubmittedUsers).toBe(2)
+			expect(stats.completionRate).toBeCloseTo(66.67, 1)
+		})
+
+		it("returns NOT_FOUND when assignment not found", async () => {
+			const mocks = jest.requireMock("$repositories/Assignment") as any
+			mocks.getById.mockResolvedValue(null)
+
+			const result = await getStatistics("nonexistent", "tenant-123")
+
+			expect(result.status).toBe(false)
+		})
+	})
+
+	describe("getDetailUserAssignmentByUserIdAndTenantId", () => {
+		it("returns error when assignment not found in repo", async () => {
+			const mocks = jest.requireMock("$repositories/Assignment") as any
+			mocks.getDetailUserAssignmentByUserIdAndTenantId.mockResolvedValue(null)
+
+			const result = await getDetailUserAssignmentByUserIdAndTenantId("user-123", "assign-123")
+
+			expect(result.status).toBe(false)
+		})
+	})
 })
