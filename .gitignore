@@ -10,4 +10,4 @@ bun.lockb
 
 .kilocode/**
 .kilocode
-coverage/**
+coverage/
