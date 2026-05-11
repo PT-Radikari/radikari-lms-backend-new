@@ -34,11 +34,13 @@ export async function streamHybridChat({
 	return executeHybridChatCore({
 		messages,
 		tenantId,
-		onFinish: async ({ text, usage }) => {
+		onFinish: async ({ text, usage, model, provider }) => {
 			Logger.info("HybridChatService.streamHybridChat.onFinish", {
 				chatRoomId,
 				responseLength: text.length,
 				usage,
+				model,
+				provider,
 			})
 
 			try {
@@ -81,7 +83,7 @@ export async function streamHybridChat({
 							userId,
 							aiChatRoomMessageId: assistantMessage.id,
 							action: "CHAT",
-							model: "gpt-4.1-mini",
+							model: `${provider}:${model}`,
 							promptTokens: usageData.inputTokens || 0,
 							completionTokens: usageData.outputTokens || 0,
 							totalTokens: usageData.totalTokens || 0,
