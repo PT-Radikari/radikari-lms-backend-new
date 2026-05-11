@@ -100,7 +100,7 @@ services:
       context: .
       dockerfile: Dockerfile.deploy
       target: builder
-    container_name: radikari-lms-migrate
+    # ← container_name removed to prevent conflicts on re-deploy
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://nwpostgres:radikari123@postgres:5432/radikari_lms?schema=public}
     command: bun prisma migrate deploy
