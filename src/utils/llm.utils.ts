@@ -22,7 +22,6 @@ const DEFAULT_MODELS: Record<SupportedLlmProvider, string> = {
 const deepseek = createOpenAI({
 	apiKey: process.env.DEEPSEEK_API_KEY || "",
 	baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
-	compatibility: "strict",
 })
 
 function normalizeProvider(value: string | undefined): SupportedLlmProvider {
@@ -175,7 +174,7 @@ export async function generateTextWithFallback(
 			const result = await generateText({
 				...input,
 				model: candidate.model,
-			})
+			} as Parameters<typeof generateText>[0])
 
 			return {
 				result,
@@ -246,7 +245,7 @@ export function streamTextWithFallback(
 			const result = streamText({
 				...input,
 				model: candidate.model,
-			})
+			} as Parameters<typeof streamText>[0])
 
 			return {
 				result,

@@ -9,17 +9,6 @@ import Logger from "$pkg/logger"
 import { getById, getByIds } from "$repositories/KnowledgeRepository"
 import { createGoogleGenerativeAI } from "@ai-sdk/google"
 import { checkTokenLimit } from "$services/Tenant/TenantLimitService"
-import {
-	createUIMessageStream,
-	createUIMessageStreamResponse,
-	embed,
-	ModelMessage,
-} from "ai"
-import { qdrantClient } from "$pkg/qdrant"
-import Logger from "$pkg/logger"
-import { getById, getByIds } from "$repositories/KnowledgeRepository"
-import { createGoogleGenerativeAI } from "@ai-sdk/google"
-import { checkTokenLimit } from "$services/Tenant/TenantLimitService"
 import * as AiPromptService from "$services/AiPromptService"
 import {
 	generateTextWithFallback,
