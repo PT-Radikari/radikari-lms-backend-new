@@ -8,7 +8,6 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
-    container_name: radikari-lms-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-radikari_lms}
       POSTGRES_USER: ${POSTGRES_USER:-nwpostgres}
@@ -48,7 +47,6 @@ services:
   # RabbitMQ Message Queue
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    container_name: radikari-lms-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-radikari}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-radikari123}
@@ -144,7 +142,6 @@ services:
       context: .
       dockerfile: Dockerfile.deploy
       target: production
-    container_name: radikari-lms-rest
     environment:
       SERVICE: rest
       PORT: ${REST_PORT:-3001}
@@ -172,6 +169,7 @@ services:
       ELASTIC_USER: ${ELASTIC_USER:-}
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Jakarta}
       GOOGLE_AUTH_CLIENT_ID: ${GOOGLE_AUTH_CLIENT_ID:-878919197106-qghh11sm5fva84uhkego9eqpdpuiama3.apps.googleusercontent.com}
       GOOGLE_AUTH_CLIENT_SECRET: ${GOOGLE_AUTH_CLIENT_SECRET:-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}
@@ -203,7 +201,6 @@ services:
       context: .
       dockerfile: Dockerfile.deploy
       target: production
-    container_name: radikari-lms-cron
     environment:
       SERVICE: cron
       DATABASE_URL: ${DATABASE_URL}
@@ -243,7 +240,6 @@ services:
       context: .
       dockerfile: Dockerfile.deploy
       target: production
-    container_name: radikari-lms-consumer
     environment:
       SERVICE: consumer
       DATABASE_URL: ${DATABASE_URL}

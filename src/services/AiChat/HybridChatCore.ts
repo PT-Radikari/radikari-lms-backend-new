@@ -1,18 +1,19 @@
 import {
 	createUIMessageStream,
 	createUIMessageStreamResponse,
-	streamText,
-	generateText,
 	embed,
 	ModelMessage,
 } from "ai"
-import { openai } from "@ai-sdk/openai"
 import { qdrantClient } from "$pkg/qdrant"
 import Logger from "$pkg/logger"
 import { getById, getByIds } from "$repositories/KnowledgeRepository"
 import { createGoogleGenerativeAI } from "@ai-sdk/google"
 import { checkTokenLimit } from "$services/Tenant/TenantLimitService"
 import * as AiPromptService from "$services/AiPromptService"
+import {
+	generateTextWithFallback,
+	streamTextWithFallback,
+} from "$utils/llm.utils"
 import { KnowledgeStatus } from "../../../generated/prisma/client"
 
 const google = createGoogleGenerativeAI({
@@ -22,7 +23,12 @@ const google = createGoogleGenerativeAI({
 export interface HybridChatCoreRequest {
 	messages: ModelMessage[]
 	tenantId: string
-	onFinish?: (event: { text: string; usage: any }) => Promise<void> | void
+	onFinish?: (event: {
+		text: string
+		usage: any
+		model: string
+		provider: string
+	}) => Promise<void> | void
 }
 
 type SourceData = {
@@ -80,16 +86,23 @@ export async function executeHybridChatCore({
 	const stream = createUIMessageStream({
 		execute: async ({ writer }) => {
 			try {
-				const { text: contextualizedQuery } = await generateText({
-					model: openai("gpt-4.1-mini"),
-					messages: [
+				const { result: rewriteResult, candidate: selectedCandidate } =
+					await generateTextWithFallback(
 						{
-							role: "system",
-							content: `Given the following conversation history and the latest user message, rephrase the latest message into a standalone search query. If the message is already standalone, return it as is. Do NOT answer the question.`,
+							messages: [
+								{
+									role: "system",
+									content: `Given the following conversation history and the latest user message, rephrase the latest message into a standalone search query. If the message is already standalone, return it as is. Do NOT answer the question.`,
+								},
+								...messages,
+							],
 						},
-						...messages,
-					],
-				})
+						{
+							operation: "hybrid-chat-query-rewrite",
+						},
+					)
+
+				const contextualizedQuery = rewriteResult.text
 
 				const { embedding } = await embed({
 					model: google.textEmbedding("gemini-embedding-001"),
@@ -250,15 +263,25 @@ FORMATTING:
 Context:
 ${contextParts.join("\n\n")}`
 
-				const result = streamText({
-					model: openai("gpt-4.1-mini"),
-					messages: [{ role: "system", content: systemMessage }, ...messages],
-					onFinish: async ({ text, usage }) => {
-						if (onFinish) {
-							await onFinish({ text, usage })
-						}
+				const { result, candidate: finalCandidate } = streamTextWithFallback(
+					{
+						messages: [{ role: "system", content: systemMessage }, ...messages],
+						onFinish: async ({ text, usage }) => {
+							if (onFinish) {
+								await onFinish({
+									text,
+									usage,
+									model: finalCandidate.modelId,
+									provider: finalCandidate.provider,
+								})
+							}
+						},
 					},
-				})
+					{
+						operation: "hybrid-chat-answer",
+						preferredCandidate: selectedCandidate,
+					},
+				)
 
 				writer.merge(result.toUIMessageStream())
 			} catch (error) {
