@@ -2,6 +2,7 @@
 import { describe, it, expect, jest } from "@jest/globals"
 
 let mockSendToQueue = jest.fn<any>()
+let mocks: Record<string, any>
 
 jest.mock("$repositories/Assignment", () => {
 	const mockCreate = jest.fn<any>()
@@ -79,6 +80,8 @@ jest.mock("$pkg/logger", () => ({
 	warning: jest.fn<any>(),
 }))
 
+mocks = jest.requireMock("$repositories/Assignment")
+
 import {
 	create,
 	getAll,
@@ -99,13 +102,7 @@ import {
 describe("AssignmentService", () => {
 	beforeEach(() => {
 		jest.clearAllMocks()
-		mockSendToQueue.mockResolvedValue(undefined)
-		const mocks = jest.requireMock("$repositories/Assignment") as any
-		mocks.create.mockResolvedValue({
-			id: "assign-123",
-			title: "Test Assignment",
-			status: "DRAFT",
-		})
+		mocks.create.mockResolvedValue({ id: "assign-123", title: "Test Assignment" })
 		mocks.getAll.mockResolvedValue({ data: [], total: 0 })
 		mocks.getById.mockResolvedValue(null)
 		mocks.update.mockResolvedValue({ id: "assign-123", title: "Updated" })
@@ -126,7 +123,6 @@ describe("AssignmentService", () => {
 
 	describe("create", () => {
 		it("should create assignment successfully", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 
 			const result = await create(
 				{ title: "Test Assignment" } as any,
@@ -154,7 +150,6 @@ describe("AssignmentService", () => {
 
 	describe("getAll", () => {
 		it("should return paginated assignments", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getAll.mockResolvedValue({ data: [{ id: "assign-1" }], total: 1 })
 
 			const result = await getAll(
@@ -169,7 +164,6 @@ describe("AssignmentService", () => {
 
 	describe("getById", () => {
 		it("should return assignment when found", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getById.mockResolvedValue({
 				id: "assign-123",
 				title: "Test Assignment",
@@ -181,7 +175,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should return error when assignment not found", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getById.mockResolvedValue(null)
 
 			const result = await getById("nonexistent", "tenant-123")
@@ -192,7 +185,6 @@ describe("AssignmentService", () => {
 
 	describe("deleteById", () => {
 		it("should delete assignment successfully", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getById.mockResolvedValue({ id: "assign-123", title: "Test" })
 			mocks.deleteById.mockResolvedValue(undefined)
 
@@ -203,7 +195,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should return error when assignment not found", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getById.mockResolvedValue(null)
 
 			const result = await deleteById("nonexistent", "tenant-123", "user-123")
@@ -214,7 +205,6 @@ describe("AssignmentService", () => {
 
 	describe("approveById", () => {
 		it("should approve assignment successfully", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getById.mockResolvedValue({
 				id: "assign-123",
 				title: "Test Assignment",
@@ -234,7 +224,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should return error when assignment not found", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getById.mockResolvedValue(null)
 
 			const result = await approveById("nonexistent", "tenant-123", "user-123", {
@@ -247,7 +236,6 @@ describe("AssignmentService", () => {
 
 	describe("getSummaryByTenantId", () => {
 		it("should return assignment summary", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getTotalAssignmentByTenantId.mockResolvedValue(10)
 			mocks.getTotalCompletedAssignmentByTenantId.mockResolvedValue(5)
 			mocks.getTotalAssignmentByStatus.mockResolvedValue(2)
@@ -262,7 +250,6 @@ describe("AssignmentService", () => {
 
 	describe("getStatistics", () => {
 		it("should return statistics for assignment", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const attemptRepo = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
 			mocks.getById.mockResolvedValue({
 				id: "assign-123",
@@ -291,7 +278,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should return error when assignment not found", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getById.mockResolvedValue(null)
 
 			const result = await getStatistics("nonexistent", "tenant-123")
@@ -302,7 +288,6 @@ describe("AssignmentService", () => {
 
 	describe("sendAssignmentAssignedNotification", () => {
 		it("should send notifications for TENANT_ROLE access", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const notifyMocks = jest.requireMock("$services/NotificationService") as any
 			mocks.getById.mockResolvedValue({
 				id: "assign-123",
@@ -319,7 +304,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should send notifications for USER access", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const notifyMocks = jest.requireMock("$services/NotificationService") as any
 			mocks.getById.mockResolvedValue({
 				id: "assign-123",
@@ -336,7 +320,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should do nothing when assignment not found", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const notifyMocks = jest.requireMock("$services/NotificationService") as any
 			mocks.getById.mockResolvedValue(null)
 
@@ -349,7 +332,6 @@ describe("AssignmentService", () => {
 
 	describe("update", () => {
 		it("should return error when assignment not found", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getById.mockResolvedValue(null)
 
 			const result = await update("nonexistent", {} as any, "tenant-123", "user-123")
@@ -358,7 +340,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should update assignment and publish regrade events", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const attemptRepo = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
 			mocks.getById
 				.mockResolvedValueOnce({ id: "assign-123", title: "Original" })
@@ -377,7 +358,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should continue even when regrade queue fails", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const attemptRepo = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
 			mocks.getById
 				.mockResolvedValueOnce({ id: "assign-123", title: "Original" })
@@ -395,7 +375,6 @@ describe("AssignmentService", () => {
 
 	describe("getSummaryByUserIdAndTenantId", () => {
 		it("should return summary with calculated totals", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const attemptRepo = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
 			const tenantRoleRepo = jest.requireMock("$repositories/TenantRoleRepository") as any
 			tenantRoleRepo.getByUserId.mockResolvedValue([{ id: "role-1" }])
@@ -415,7 +394,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should handle zero assignments", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const attemptRepo = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
 			const tenantRoleRepo = jest.requireMock("$repositories/TenantRoleRepository") as any
 			tenantRoleRepo.getByUserId.mockResolvedValue([])
@@ -433,7 +411,6 @@ describe("AssignmentService", () => {
 
 	describe("getUserListWithAssignmentSummaryByTenantId", () => {
 		it("should calculate progress percentage", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getUserListWithAssignmentSummaryByTenantId.mockResolvedValue([
 				{
 					id: "user-1",
@@ -457,7 +434,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should return 0 progress when no assignments", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getUserListWithAssignmentSummaryByTenantId.mockResolvedValue([
 				{
 					id: "user-1",
@@ -504,7 +480,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should return 0 progress when no users", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getAssginmentWithUserSummaryByTenantId.mockResolvedValue([
 				{
 					id: "assign-1",
@@ -536,7 +511,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should return assignment list for valid user", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const tenantUserMocks = jest.requireMock("$repositories/TenantUserRepository") as any
 			tenantUserMocks.getByTenantIdAndUserId.mockResolvedValue({ tenantRoleId: "role-1" })
 			mocks.getAssignmentListByUserIdAndTenantIdAndTenantRoleId.mockResolvedValue([
@@ -547,11 +521,32 @@ describe("AssignmentService", () => {
 
 			expect(result.status).toBe(true)
 		})
+
+		it("should handle multiple assignments for one member (Bug #4)", async () => {
+			const tenantUserMocks = jest.requireMock("$repositories/TenantUserRepository") as any
+			tenantUserMocks.getByTenantIdAndUserId.mockResolvedValue({ tenantRoleId: "role-1" })
+			mocks.getAssignmentListByUserIdAndTenantIdAndTenantRoleId.mockResolvedValue([
+				{
+					id: "assign-1",
+					title: "Task 1",
+					assignmentUserAttempts: [{ id: "attempt-1", score: 80, isSubmitted: true }],
+				},
+				{
+					id: "assign-2",
+					title: "Task 2",
+					assignmentUserAttempts: [],
+				},
+			])
+
+			const result = await getUserAssignmentList("user-123", "tenant-123")
+
+			expect(result.status).toBe(true)
+			expect((result.data as any).length).toBe(2)
+		})
 	})
 
 	describe("getDetailUserAssignmentByUserIdAndTenantId", () => {
 		it("should return error when assignment not found", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getDetailUserAssignmentByUserIdAndTenantId.mockResolvedValue(null)
 
 			const result = await getDetailUserAssignmentByUserIdAndTenantId("user-123", "assign-123")
@@ -560,7 +555,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should return assignment data when user has not submitted", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getDetailUserAssignmentByUserIdAndTenantId.mockResolvedValue({
 				id: "assign-123",
 				title: "Test Assignment",
@@ -596,7 +590,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should return assignment with attempt data when user has submitted", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getDetailUserAssignmentByUserIdAndTenantId.mockResolvedValue({
 				id: "assign-123",
 				title: "Submitted Assignment",
@@ -658,7 +651,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should include options, userAnswer, and correctOptions for MULTIPLE_SELECT question (not submitted)", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getDetailUserAssignmentByUserIdAndTenantId.mockResolvedValue({
 				id: "assign-123",
 				title: "Test Assignment",
@@ -700,7 +692,6 @@ describe("AssignmentService", () => {
 		})
 
 		it("should include userAnswer and correctOptions for MULTIPLE_SELECT question (submitted)", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getDetailUserAssignmentByUserIdAndTenantId.mockResolvedValue({
 				id: "assign-123",
 				title: "Test Assignment",
@@ -769,7 +760,6 @@ describe("AssignmentService", () => {
 describe("AssignmentService — deep edge cases", () => {
 	describe("create — repo error", () => {
 		it("returns 500 when repository throws", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.create.mockRejectedValueOnce(new Error("DB connection lost"))
 
 			const result = await create(
@@ -784,7 +774,6 @@ describe("AssignmentService — deep edge cases", () => {
 
 	describe("approveById — action variants", () => {
 		it("logs REVISION action correctly", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const activityMocks = jest.requireMock("$services/UserActivityLogService") as any
 			mocks.getById.mockResolvedValue({
 				id: "assign-123",
@@ -811,7 +800,6 @@ describe("AssignmentService — deep edge cases", () => {
 		})
 
 		it("logs REJECT action correctly", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const activityMocks = jest.requireMock("$services/UserActivityLogService") as any
 			mocks.getById.mockResolvedValue({
 				id: "assign-123",
@@ -840,7 +828,6 @@ describe("AssignmentService — deep edge cases", () => {
 
 	describe("getStatistics — zero submission edge cases", () => {
 		it("returns zero averages when no submissions", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const attemptRepo = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
 			mocks.getById.mockResolvedValue({
 				id: "assign-123",
@@ -865,7 +852,6 @@ describe("AssignmentService — deep edge cases", () => {
 		})
 
 		it("returns zero completion rate when no assigned users", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const attemptRepo = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
 			mocks.getById.mockResolvedValue({
 				id: "assign-123",
@@ -888,7 +874,6 @@ describe("AssignmentService — deep edge cases", () => {
 
 	describe("sendAssignmentAssignedNotification — default access branch", () => {
 		it("does nothing for unknown access type (default branch)", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const notifyMocks = jest.requireMock("$services/NotificationService") as any
 			// @ts-ignore — casting to a non-standard access type
 			mocks.getById.mockResolvedValue({
@@ -908,7 +893,6 @@ describe("AssignmentService — deep edge cases", () => {
 
 	describe("getStatistics — with actual submissions", () => {
 		it("calculates averageScore correctly with multiple submissions", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			const attemptRepo = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
 			const now = new Date()
 			mocks.getById.mockResolvedValue({
@@ -946,7 +930,6 @@ describe("AssignmentService — deep edge cases", () => {
 		})
 
 		it("returns NOT_FOUND when assignment not found", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getById.mockResolvedValue(null)
 
 			const result = await getStatistics("nonexistent", "tenant-123")
@@ -957,7 +940,6 @@ describe("AssignmentService — deep edge cases", () => {
 
 	describe("getDetailUserAssignmentByUserIdAndTenantId", () => {
 		it("returns error when assignment not found in repo", async () => {
-			const mocks = jest.requireMock("$repositories/Assignment") as any
 			mocks.getDetailUserAssignmentByUserIdAndTenantId.mockResolvedValue(null)
 
 			const result = await getDetailUserAssignmentByUserIdAndTenantId("user-123", "assign-123")

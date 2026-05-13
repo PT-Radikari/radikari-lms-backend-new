@@ -630,7 +630,11 @@ export async function getDetailUserAssignmentByUserIdAndTenantId(
 					isSubmitted: true,
 				},
 				include: {
-					assignmentUserAttemptQuestionAnswers: true,
+					assignmentUserAttemptQuestionAnswers: {
+						include: {
+							selectedOptions: true,
+						},
+					},
 				},
 			},
 		},
