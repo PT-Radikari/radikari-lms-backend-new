@@ -174,6 +174,23 @@ describe("authMiddleware", () => {
 			expect(next).toHaveBeenCalled()
 		})
 
+		it("should call next when user is HEAD_OF_OFFICE in tenant (bypass tenant check)", async () => {
+			const tenantRepo = jest.requireMock("$repositories/TenantRepository") as any
+			const { mock: ctx } = createMockContext({
+				jwtPayload: {
+					id: "checker-1",
+					email: "checker@b.com",
+					role: Roles.USER,
+					tenantRoleName: "HEAD_OF_OFFICE",
+				},
+				params: { tenantId: "tenant-123" },
+			})
+
+			await checkRoleInTenant(ctx as any, next)
+			expect(tenantRepo.getById).not.toHaveBeenCalled()
+			expect(next).toHaveBeenCalled()
+		})
+
 		it("should return 403 when tenant does not exist", async () => {
 			const tenantRepo = jest.requireMock("$repositories/TenantRepository") as any
 			tenantRepo.getById.mockResolvedValue(null)
@@ -239,6 +256,33 @@ describe("authMiddleware", () => {
 		const next = jest.fn<() => Promise<void>>()
 
 		it("should call next when user is ADMIN (bypass ACL check)", async () => {
+			const { mock: ctx } = createMockContext({
+				jwtPayload: { id: "admin-1", email: "a@b.com", role: Roles.ADMIN },
+				params: { tenantId: "tenant-123" },
+			})
+
+			await checkAccessTenantRole("KNOWLEDGE", "CREATE")(ctx as any, next)
+			expect(next).toHaveBeenCalled()
+		})
+
+		it("should call next when user is HEAD_OF_OFFICE (bypass ACL check)", async () => {
+			const { mock: ctx } = createMockContext({
+				jwtPayload: {
+					id: "checker-1",
+					email: "checker@b.com",
+					role: Roles.USER,
+					tenantRoleName: "HEAD_OF_OFFICE",
+				},
+				params: { tenantId: "tenant-123" },
+			})
+
+			await checkAccessTenantRole("KNOWLEDGE", "CREATE")(ctx as any, next)
+			expect(next).toHaveBeenCalled()
+		})
+
+		it("should call next when user is ADMIN (bypass ACL check)", async () => {
+			mockPrisma.user.findUnique.mockResolvedValue(null)
+
 			const { mock: ctx } = createMockContext({
 				jwtPayload: { id: "admin-1", email: "a@b.com", role: Roles.ADMIN },
 				params: { tenantId: "tenant-123" },
