@@ -71,7 +71,7 @@ ENV PORT=${PORT:-3000}
 
 # Health check (will be customized per service in docker-compose)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/health 2>/dev/null || curl -f http://localhost:3001/health 2>/dev/null || exit 1
+    CMD curl -f http://localhost:${PORT}/ 2>/dev/null || curl -f http://localhost:3001/ 2>/dev/null || exit 1
 
 # Switch to non-root user
 USER radikari
