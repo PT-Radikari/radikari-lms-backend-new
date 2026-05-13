@@ -486,6 +486,28 @@ export async function getDetailUserAssignmentByUserIdAndTenantId(
 									}),
 								),
 							}
+						} else if (question.type === "MULTIPLE_SELECT") {
+							return {
+								...baseQuestion,
+								options: question.assignmentQuestionOptions.map(
+									(option: any) => ({
+										id: option.id,
+										content: option.content,
+									}),
+								),
+							}
+						} else if (question.type === "TRUE_FALSE") {
+							return {
+								...baseQuestion,
+								correctAnswer:
+									question.assignmentQuestionTrueFalseAnswer?.correctAnswer,
+							}
+						} else if (question.type === "ESSAY") {
+							return {
+								...baseQuestion,
+								correctAnswer:
+									question.assignmentQuestionEssayReferenceAnswer?.content,
+							}
 						}
 
 						return baseQuestion
@@ -551,6 +573,23 @@ export async function getDetailUserAssignmentByUserIdAndTenantId(
 							userAnswer: assignmentUserAttemptAnswer?.trueFalseAnswer ?? null,
 							correctAnswer:
 								question.assignmentQuestionTrueFalseAnswer?.correctAnswer,
+						}
+					} else if (question.type === "MULTIPLE_SELECT") {
+						return {
+							...baseQuestion,
+							options: question.assignmentQuestionOptions.map(
+								(option: any) => ({
+									id: option.id,
+									content: option.content,
+									isCorrectAnswer: option.isCorrectAnswer,
+								}),
+							),
+							userAnswer: (assignmentUserAttemptAnswer as any)?.selectedOptions?.map(
+								(o: any) => o.assignmentQuestionOptionId,
+							) ?? null,
+							correctOptions: question.assignmentQuestionOptions
+								.filter((o: any) => o.isCorrectAnswer)
+								.map((o: any) => o.id),
 						}
 					}
 

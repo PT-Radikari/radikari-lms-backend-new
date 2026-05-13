@@ -656,6 +656,110 @@ describe("AssignmentService", () => {
 			expect((result.data as any).assignment.isSubmitted).toBe(true)
 			expect((result.data as any).assignmentAttempt.score).toBe(80)
 		})
+
+		it("should include options, userAnswer, and correctOptions for MULTIPLE_SELECT question (not submitted)", async () => {
+			const mocks = jest.requireMock("$repositories/Assignment") as any
+			mocks.getDetailUserAssignmentByUserIdAndTenantId.mockResolvedValue({
+				id: "assign-123",
+				title: "Test Assignment",
+				durationInMinutes: 60,
+				status: "PUBLISHED",
+				access: "TENANT",
+				expiredDate: new Date(),
+				tenantId: "tenant-123",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+				createdByUserId: "creator-1",
+				isSubmitted: false,
+				assignmentUserAttempts: [],
+				assignmentQuestions: [
+					{
+						id: "q1",
+						order: 1,
+						content: "Select all correct options",
+						type: "MULTIPLE_SELECT",
+						assignmentQuestionOptions: [
+							{ id: "opt-1", content: "Option A", isCorrectAnswer: true },
+							{ id: "opt-2", content: "Option B", isCorrectAnswer: false },
+							{ id: "opt-3", content: "Option C", isCorrectAnswer: true },
+						],
+					},
+				],
+			})
+
+			const result = await getDetailUserAssignmentByUserIdAndTenantId("user-123", "assign-123")
+
+			expect(result.status).toBe(true)
+			const question = (result.data as any).questions[0]
+			expect(question.type).toBe("MULTIPLE_SELECT")
+			expect(question.options).toHaveLength(3)
+			expect(question.options[0].id).toBe("opt-1")
+			expect(question.options[0].content).toBe("Option A")
+			expect(question.userAnswer).toBeUndefined()
+			expect(question.correctOptions).toBeUndefined()
+		})
+
+		it("should include userAnswer and correctOptions for MULTIPLE_SELECT question (submitted)", async () => {
+			const mocks = jest.requireMock("$repositories/Assignment") as any
+			mocks.getDetailUserAssignmentByUserIdAndTenantId.mockResolvedValue({
+				id: "assign-123",
+				title: "Test Assignment",
+				durationInMinutes: 60,
+				status: "PUBLISHED",
+				access: "TENANT",
+				expiredDate: new Date(),
+				tenantId: "tenant-123",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+				createdByUserId: "creator-1",
+				showAnswer: true,
+				showQuestion: true,
+				assignmentUserAttempts: [
+					{
+						id: "attempt-123",
+						score: 50,
+						percentageScore: 50,
+						isSubmitted: true,
+						submittedAt: new Date(),
+						createdAt: new Date(),
+						updatedAt: new Date(),
+						assignmentUserAttemptQuestionAnswers: [
+							{
+								assignmentQuestionId: "q1",
+								isAnswerCorrect: false,
+								selectedOptions: [
+									{ assignmentQuestionOptionId: "opt-1" },
+									{ assignmentQuestionOptionId: "opt-2" },
+								],
+							},
+						],
+					},
+				],
+				assignmentQuestions: [
+					{
+						id: "q1",
+						order: 1,
+						content: "Select all correct options",
+						type: "MULTIPLE_SELECT",
+						assignmentQuestionOptions: [
+							{ id: "opt-1", content: "Option A", isCorrectAnswer: true },
+							{ id: "opt-2", content: "Option B", isCorrectAnswer: false },
+							{ id: "opt-3", content: "Option C", isCorrectAnswer: true },
+						],
+					},
+				],
+			})
+
+			const result = await getDetailUserAssignmentByUserIdAndTenantId("user-123", "assign-123")
+
+			expect(result.status).toBe(true)
+			const question = (result.data as any).questions[0]
+			expect(question.type).toBe("MULTIPLE_SELECT")
+			expect(question.options).toHaveLength(3)
+			expect(question.userAnswer).toEqual(["opt-1", "opt-2"])
+			expect(question.correctOptions).toEqual(["opt-1", "opt-3"])
+			expect(question.isCorrect).toBe(false)
+		})
 	})
 })
 
