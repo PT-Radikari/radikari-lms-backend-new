@@ -33,6 +33,13 @@ jest.mock("$repositories/UserRepository", () => {
 	}
 })
 
+var sharedMockGetByTenantIdAndUserId = jest.fn<any>()
+jest.mock("$repositories/TenantUserRepository", () => {
+	return {
+		getByTenantIdAndUserId: sharedMockGetByTenantIdAndUserId,
+	}
+})
+
 jest.mock("googleapis", () => {
 	return {
 		google: {
@@ -50,7 +57,7 @@ jest.mock("googleapis", () => {
 	}
 })
 
-import { logIn, verifyToken, changePassword, googleCallback } from "$services/AuthService"
+import { logIn, verifyToken, changePassword, googleCallback, refreshTokenWithTenant } from "$services/AuthService"
 import { Roles, UserType } from "$generated/prisma/client"
 import jwt from "jsonwebtoken"
 
@@ -263,6 +270,74 @@ describe("AuthService", () => {
 
 			expect(result.status).toBe(false)
 			expect(result.err?.code).toBe(500)
+		})
+	})
+
+	describe("refreshTokenWithTenant", () => {
+		beforeEach(() => {
+			sharedMockGetByTenantIdAndUserId.mockReset()
+			sharedMockGetById.mockReset()
+		})
+
+		it("should return success with token containing tenantRoleName when user is in tenant", async () => {
+			const tenantUser = {
+				tenantRole: { name: "Checker" },
+			}
+			const mockUser = {
+				id: "user-123",
+				email: "test@example.com",
+				fullName: "Test User",
+				role: Roles.USER,
+				type: UserType.INTERNAL,
+				isActive: true,
+			}
+			sharedMockGetByTenantIdAndUserId.mockResolvedValue(tenantUser)
+			sharedMockGetById.mockResolvedValue(mockUser)
+
+			const result = await refreshTokenWithTenant("user-123", "tenant-abc")
+
+			expect(result.status).toBe(true)
+			expect(result.data).toHaveProperty("token")
+			expect(result.data).toHaveProperty("tenantRoleName", "Checker")
+			expect(result.data).toHaveProperty("user")
+		})
+
+		it("should return success with Maker role name", async () => {
+			sharedMockGetByTenantIdAndUserId.mockResolvedValue({
+				tenantRole: { name: "Maker" },
+			})
+			sharedMockGetById.mockResolvedValue({
+				id: "user-123",
+				email: "maker@example.com",
+				fullName: "Maker User",
+				role: Roles.USER,
+			})
+
+			const result = await refreshTokenWithTenant("user-123", "tenant-abc")
+
+			expect(result.status).toBe(true)
+			expect(result.data.tenantRoleName).toBe("Maker")
+		})
+
+		it("should return error when user is not a member of the tenant", async () => {
+			sharedMockGetByTenantIdAndUserId.mockResolvedValue(null)
+
+			const result = await refreshTokenWithTenant("user-123", "nonexistent-tenant")
+
+			expect(result.status).toBe(false)
+			expect(result.err?.code).toBe(403)
+		})
+
+		it("should return error when user not found", async () => {
+			sharedMockGetByTenantIdAndUserId.mockResolvedValue({
+				tenantRole: { name: "Agent" },
+			})
+			sharedMockGetById.mockResolvedValue(null)
+
+			const result = await refreshTokenWithTenant("nonexistent-user", "tenant-abc")
+
+			expect(result.status).toBe(false)
+			expect(result.err?.code).toBe(404)
 		})
 	})
 })

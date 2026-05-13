@@ -333,6 +333,60 @@ describe("authMiddleware", () => {
 		})
 	})
 
+	describe("tenantRoleName in JWT payload", () => {
+		const next = jest.fn<() => Promise<void>>()
+
+		it("should read tenantRoleName from jwtPayload when user is in tenant", async () => {
+			const tenantRepo = jest.requireMock("$repositories/TenantRepository") as any
+			const tenantUserRepo = jest.requireMock("$repositories/TenantUserRepository") as any
+			tenantRepo.getById.mockResolvedValue({ id: "tenant-123" })
+			tenantUserRepo.getByTenantIdAndUserId.mockResolvedValue({
+				id: "tu-1",
+				tenantId: "tenant-123",
+				userId: "user-1",
+				tenantRole: { id: "role-1", name: "Checker" },
+			})
+
+			const { mock: ctx } = createMockContext({
+				jwtPayload: {
+					id: "user-1",
+					email: "a@b.com",
+					role: Roles.USER,
+					tenantRoleName: "Checker",
+				},
+				params: { tenantId: "tenant-123" },
+			})
+
+			await checkRoleInTenant(ctx as any, next)
+			expect(next).toHaveBeenCalled()
+		})
+
+		it("should include tenantRoleName=Maker when user has Maker role in tenant", async () => {
+			const tenantRepo = jest.requireMock("$repositories/TenantRepository") as any
+			const tenantUserRepo = jest.requireMock("$repositories/TenantUserRepository") as any
+			tenantRepo.getById.mockResolvedValue({ id: "tenant-123" })
+			tenantUserRepo.getByTenantIdAndUserId.mockResolvedValue({
+				id: "tu-1",
+				tenantId: "tenant-123",
+				userId: "user-1",
+				tenantRole: { id: "role-2", name: "Maker" },
+			})
+
+			const { mock: ctx } = createMockContext({
+				jwtPayload: {
+					id: "user-1",
+					email: "maker@b.com",
+					role: Roles.USER,
+					tenantRoleName: "Maker",
+				},
+				params: { tenantId: "tenant-123" },
+			})
+
+			await checkRoleInTenant(ctx as any, next)
+			expect(next).toHaveBeenCalled()
+		})
+	})
+
 	describe("checkRoleAssignmentAccess", () => {
 		const next = jest.fn<() => Promise<void>>()
 
