@@ -372,7 +372,7 @@ describe("AssignmentAttemptService", () => {
 			expect(result.status).toBe(false)
 		})
 
-		it("should return error when already submitted", async () => {
+		it("should return isValid:false when already submitted (not an error)", async () => {
 			const repoMocks = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
 			repoMocks.getByUserIdAndAssignmentId.mockResolvedValue({
 				id: "attempt-123",
@@ -381,7 +381,9 @@ describe("AssignmentAttemptService", () => {
 
 			const result = await getTimeStatus("user-123", "assign-123")
 
-			expect(result.status).toBe(false)
+			expect(result.status).toBe(true)
+			expect((result.data as any).isValid).toBe(false)
+			expect((result.data as any).remainingSeconds).toBe(0)
 		})
 	})
 
@@ -1829,7 +1831,7 @@ describe("AssignmentAttemptService — deep edge cases", () => {
 			expect(result.status).toBe(false)
 		})
 
-		it("returns BAD_REQUEST when assignment already submitted", async () => {
+		it("returns isValid:false when assignment already submitted (not an error)", async () => {
 			const repoMocks = jest.requireMock("$repositories/Assignment/AssignmentAttemptRepository") as any
 			repoMocks.getByUserIdAndAssignmentId.mockResolvedValue({
 				id: "attempt-123",
@@ -1839,7 +1841,9 @@ describe("AssignmentAttemptService — deep edge cases", () => {
 
 			const result = await getTimeStatus("user-123", "assign-123")
 
-			expect(result.status).toBe(false)
+			expect(result.status).toBe(true)
+			expect((result.data as any).isValid).toBe(false)
+			expect((result.data as any).remainingSeconds).toBe(0)
 		})
 
 		it("returns NOT_FOUND when assignment tenant not found", async () => {

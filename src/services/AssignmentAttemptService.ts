@@ -726,10 +726,14 @@ export async function getTimeStatus(
 		}
 
 		if (assignmentAttempt.isSubmitted) {
-			return HandleServiceResponseCustomError(
-				"Assignment already submitted",
-				ResponseStatus.BAD_REQUEST,
-			)
+			return HandleServiceResponseSuccess({
+				isValid: false,
+				remainingSeconds: 0,
+				gracePeriodMs: parseInt(
+					process.env.ASSIGNMENT_GRACE_PERIOD_MS || "60000",
+					10,
+				),
+			})
 		}
 
 		// Fetch assignment to get tenantId
