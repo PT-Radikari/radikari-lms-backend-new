@@ -6,14 +6,18 @@ import {
 import { exclude, UserJWTDAO, UserLoginDTO } from "$entities/User"
 import Logger from "$pkg/logger"
 import * as UserRepository from "$repositories/UserRepository"
+import * as TenantUserRepository from "$repositories/TenantUserRepository"
 import jwt from "jsonwebtoken"
 import { Roles, User, UserType } from "../../generated/prisma/client"
 import { googleOAuth } from "$pkg/oauth/google"
 import { google } from "googleapis"
 import { ulid } from "ulid"
 
-function createToken(user: User) {
-	const jwtPayload = exclude(user, "password") as UserJWTDAO
+function createToken(user: User, tenantRoleName?: string) {
+	const jwtPayload = {
+		...exclude(user, "password"),
+		...(tenantRoleName && { tenantRoleName }),
+	} as UserJWTDAO
 	const token = jwt.sign(jwtPayload, process.env.JWT_SECRET ?? "", {
 		expiresIn: "1d",
 	})
@@ -188,6 +192,43 @@ export async function googleCallback(
 		})
 	} catch (err) {
 		Logger.error(`AuthService.googleCallback`, {
+			error: err,
+		})
+		return HandleServiceResponseCustomError("Internal Server Error", 500)
+	}
+}
+
+export async function refreshTokenWithTenant(
+	userId: string,
+	tenantId: string,
+): Promise<ServiceResponse<any>> {
+	try {
+		const tenantUser = await TenantUserRepository.getByTenantIdAndUserId(
+			tenantId,
+			userId,
+		)
+
+		if (!tenantUser) {
+			return HandleServiceResponseCustomError(
+				"User is not a member of this tenant",
+				403,
+			)
+		}
+
+		const user = await UserRepository.getById(userId)
+		if (!user) {
+			return HandleServiceResponseCustomError("User not found", 404)
+		}
+
+		const token = createToken(user, tenantUser.tenantRole.name)
+
+		return HandleServiceResponseSuccess({
+			user: exclude(user, "password"),
+			token,
+			tenantRoleName: tenantUser.tenantRole.name,
+		})
+	} catch (err) {
+		Logger.error(`AuthService.refreshTokenWithTenant`, {
 			error: err,
 		})
 		return HandleServiceResponseCustomError("Internal Server Error", 500)

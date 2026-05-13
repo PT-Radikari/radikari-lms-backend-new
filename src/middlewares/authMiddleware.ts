@@ -46,6 +46,7 @@ function getJwtUser(c: Context): UserJWTDAO | null {
 	const email: string | undefined = p.email
 	const fullName: string | undefined = p.fullName ?? p.name
 	const phoneNumber: string | undefined = p.phoneNumber ?? p.phone
+	const tenantRoleName: string | undefined = p.tenantRoleName
 
 	// normalize role
 	const role = transformRoleToEnumRole(p.role) || Roles.USER
@@ -58,6 +59,7 @@ function getJwtUser(c: Context): UserJWTDAO | null {
 		fullName: fullName ?? "",
 		phoneNumber: phoneNumber ?? "",
 		role,
+		tenantRoleName,
 	}
 }
 
