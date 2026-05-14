@@ -596,6 +596,9 @@ export async function getAssignmentListByUserIdAndTenantIdAndTenantRoleId(
 					userId,
 					isSubmitted: true,
 				},
+				orderBy: {
+					submittedAt: "desc",
+				},
 			},
 		},
 		orderBy: {

@@ -733,6 +733,7 @@ export async function getTimeStatus(
 					process.env.ASSIGNMENT_GRACE_PERIOD_MS || "60000",
 					10,
 				),
+				isSubmitted: true,
 			})
 		}
 
