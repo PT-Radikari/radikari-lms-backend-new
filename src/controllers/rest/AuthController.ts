@@ -30,6 +30,28 @@ export async function verifyToken(c: Context): Promise<TypedResponse> {
 	return response_success(c, serviceResponse.data, "Token Verified!")
 }
 
+export async function refreshTokenWithTenant(
+	c: Context,
+): Promise<TypedResponse> {
+	const { tenantId } = await c.req.json()
+	const user: UserJWTDAO = c.get("jwtPayload")
+
+	const serviceResponse = await AuthService.refreshTokenWithTenant(
+		user.id,
+		tenantId,
+	)
+
+	if (!serviceResponse.status) {
+		return handleServiceErrorWithResponse(c, serviceResponse)
+	}
+
+	return response_success(
+		c,
+		serviceResponse.data,
+		"Token refreshed with tenant role!",
+	)
+}
+
 export async function changePassword(c: Context): Promise<TypedResponse> {
 	const { newPassword, oldPassword } = await c.req.json()
 	const invalidFields: any = []

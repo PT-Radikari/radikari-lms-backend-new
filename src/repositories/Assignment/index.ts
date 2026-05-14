@@ -596,6 +596,9 @@ export async function getAssignmentListByUserIdAndTenantIdAndTenantRoleId(
 					userId,
 					isSubmitted: true,
 				},
+				orderBy: {
+					submittedAt: "desc",
+				},
 			},
 		},
 		orderBy: {
@@ -630,7 +633,11 @@ export async function getDetailUserAssignmentByUserIdAndTenantId(
 					isSubmitted: true,
 				},
 				include: {
-					assignmentUserAttemptQuestionAnswers: true,
+					assignmentUserAttemptQuestionAnswers: {
+						include: {
+							selectedOptions: true,
+						},
+					},
 				},
 			},
 		},

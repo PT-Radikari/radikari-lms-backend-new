@@ -47,7 +47,7 @@ export class EphemeralThreadStore {
 	createThread(tenantId: string): EphemeralThreadData {
 		const threadId = this.generateThreadId()
 		const now = new Date()
-		const ttlSeconds = parseInt(process.env.EPHEMERAL_THREAD_TTL || "86400")
+		const ttlSeconds = parseInt(process.env.EPHEMERAL_THREAD_TTL || "86400", 10) || 86400
 
 		const threadData: EphemeralThreadData = {
 			threadId,

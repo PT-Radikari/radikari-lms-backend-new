@@ -638,6 +638,25 @@ export async function getHistoryUserAssignmentAttempts(
 						correctAnswer:
 							question.assignmentQuestionEssayReferenceAnswer?.content,
 					}
+				} else if (question.type === AssignmentQuestionType.MULTIPLE_SELECT) {
+					return {
+						id: question.id,
+						order: question.order,
+						content: question.content,
+						type: question.type,
+						options: question.assignmentQuestionOptions.map((option) => ({
+							id: option.id,
+							content: option.content,
+							isCorrectAnswer: option.isCorrectAnswer,
+						})),
+						isCorrect: assignmentUserAttemptAnswer?.isAnswerCorrect,
+						userAnswer: (assignmentUserAttemptAnswer as any)?.selectedOptions?.map(
+							(o: any) => o.assignmentQuestionOptionId,
+						),
+						correctOptions: question.assignmentQuestionOptions
+							.filter((o) => o.isCorrectAnswer)
+							.map((o) => o.id),
+					}
 				} else if (question.type === AssignmentQuestionType.TRUE_FALSE) {
 					return {
 						id: question.id,
@@ -707,10 +726,15 @@ export async function getTimeStatus(
 		}
 
 		if (assignmentAttempt.isSubmitted) {
-			return HandleServiceResponseCustomError(
-				"Assignment already submitted",
-				ResponseStatus.BAD_REQUEST,
-			)
+			return HandleServiceResponseSuccess({
+				isValid: false,
+				remainingSeconds: 0,
+				gracePeriodMs: parseInt(
+					process.env.ASSIGNMENT_GRACE_PERIOD_MS || "60000",
+					10,
+				),
+				isSubmitted: true,
+			})
 		}
 
 		// Fetch assignment to get tenantId

@@ -6,6 +6,7 @@ export interface UserJWTDAO {
 	fullName: string
 	role: Roles
 	phoneNumber: string
+	tenantRoleName?: string
 }
 
 export interface UserLoginDTO {

@@ -12,6 +12,8 @@ import { seedForum } from "./seedForum"
 import { seedAiPrompt } from "./seedAiPrompt"
 import { seedBroadcast } from "./seedBroadcast"
 import { seedTenant } from "./seedTenant"
+import { seedTestTenant } from "./seedTestTenant"
+import { seedBugTestMemberTasks } from "./seedBugTestMemberTasks"
 
 async function seed() {
 	console.log("🚀 Starting seeder...")
@@ -33,6 +35,9 @@ async function seed() {
 			await seedForum(prisma)
 			await seedAiPrompt(prisma)
 			await seedBroadcast(prisma)
+			// Bug test seeds (require test-tenant to exist)
+			await seedTestTenant(prisma)
+			await seedBugTestMemberTasks(prisma)
 		} catch (seedError) {
 			console.error("Seeding error:", seedError)
 			throw seedError

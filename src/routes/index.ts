@@ -16,6 +16,11 @@ router.put(
 	AuthMiddleware.checkJwt,
 	AuthController.changePassword,
 )
+router.post(
+	"/refresh-token",
+	AuthMiddleware.checkJwt,
+	AuthController.refreshTokenWithTenant,
+)
 
 router.route("/users", RoutesRegistry.UserRoutes)
 router.route(

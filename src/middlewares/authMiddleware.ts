@@ -9,6 +9,7 @@ import { getCookie } from "hono/cookie"
 import jwt from "jsonwebtoken"
 import { Roles } from "../../generated/prisma/client"
 import { UserJWTDAO } from "$entities/User"
+import { TenantRoleIdentifier } from "$entities/TenantRole"
 import * as TenantUserRepository from "$repositories/TenantUserRepository"
 import * as TenantRepository from "$repositories/TenantRepository"
 import * as TenantRoleRepository from "$repositories/TenantRoleRepository"
@@ -46,6 +47,7 @@ function getJwtUser(c: Context): UserJWTDAO | null {
 	const email: string | undefined = p.email
 	const fullName: string | undefined = p.fullName ?? p.name
 	const phoneNumber: string | undefined = p.phoneNumber ?? p.phone
+	const tenantRoleName: string | undefined = p.tenantRoleName
 
 	// normalize role
 	const role = transformRoleToEnumRole(p.role) || Roles.USER
@@ -58,6 +60,7 @@ function getJwtUser(c: Context): UserJWTDAO | null {
 		fullName: fullName ?? "",
 		phoneNumber: phoneNumber ?? "",
 		role,
+		tenantRoleName,
 	}
 }
 
@@ -175,7 +178,7 @@ export async function checkRoleInTenant(c: Context, next: Next) {
 			return response_forbidden(c, "Tenant id is missing on route parameter!")
 		}
 
-		if (user.role === Roles.ADMIN) {
+		if (user.role === Roles.ADMIN || user.tenantRoleName === TenantRoleIdentifier.HEAD_OF_OFFICE) {
 			await next()
 			return
 		}
@@ -212,7 +215,7 @@ export function checkAccessTenantRole(featureName: string, actionName: string) {
 			if (!user) return response_unauthorized(c, "Invalid token payload")
 
 			// ✅ Admin bypass moved up
-			if (user.role === Roles.ADMIN) {
+			if (user.role === Roles.ADMIN || user.tenantRoleName === TenantRoleIdentifier.HEAD_OF_OFFICE) {
 				await next()
 				return
 			}
