@@ -300,9 +300,17 @@ export async function generateQuestionsStream(c: Context): Promise<Response> {
 			return c.json({ error: "Tenant ID is required" }, 400)
 		}
 
+		const questionCount = Number(count)
+		if (!Number.isInteger(questionCount) || questionCount < 1 || questionCount > 20) {
+			return c.json(
+				{ error: "Jumlah soal harus antara 1 dan 20" },
+				400,
+			)
+		}
+
 		const result = await AssignmentAiService.streamQuestions({
 			prompt,
-			count,
+			count: questionCount,
 			tenantId,
 		})
 
